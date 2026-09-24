@@ -12,9 +12,19 @@ import {
   Building2, 
   Truck, 
   FileCheck,
-  Package
+  Package,
+  History,
+  Sparkles,
+  TrendingUp,
+  X,
+  Factory,
+  FileText,
+  Filter,
+  Check,
+  ArrowUpRight,
+  HelpCircle
 } from 'lucide-react';
-import { Pedido, ItemPedido, ExpedicaoNF, Cliente, Produto, Vendedor } from '@/lib/types';
+import { Pedido, ItemPedido, ExpedicaoNF, Cliente, Produto, Vendedor, Fornecedor } from '@/lib/types';
 import { StorageService } from '@/lib/storage';
 
 interface Props {
@@ -26,6 +36,15 @@ export default function OrderForm({ initialPedido }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [allPedidosHistory, setAllPedidosHistory] = useState<Pedido[]>([]);
+
+  // Modal de Acesso Rápido a Cotações & Compras de Usinas
+  const [showCotacoesModal, setShowCotacoesModal] = useState(false);
+  const [activeItemIndexForModal, setActiveItemIndexForModal] = useState<number>(0);
+  const [modalSearchQuery, setModalSearchQuery] = useState('');
+  const [selectedTabCotacoes, setSelectedTabCotacoes] = useState<'HISTORICO' | 'FORNECEDORES'>('HISTORICO');
+  const [appliedToast, setAppliedToast] = useState('');
 
   // Form State
   const [tipo, setTipo] = useState<'ORCAMENTO' | 'PEDIDO'>(initialPedido?.tipo || 'PEDIDO');
@@ -88,6 +107,8 @@ export default function OrderForm({ initialPedido }: Props) {
     setClientes(listCli);
     setProdutos(StorageService.getProdutos());
     setVendedores(StorageService.getVendedores());
+    setFornecedores(StorageService.getFornecedores());
+    setAllPedidosHistory(StorageService.getPedidos());
 
     if (initialPedido?.cliente_cnpj) {
       const match = listCli.find(c => c.cnpj === initialPedido.cliente_cnpj);
@@ -164,6 +185,107 @@ export default function OrderForm({ initialPedido }: Props) {
       setItens(novosItens);
     }
   };
+
+  // Abrir Modal de Cotações & Compras para uma linha do pedido
+  const handleOpenCotacoesModal = (index: number) => {
+    setActiveItemIndexForModal(index);
+    const targetItem = itens[index];
+    const initialQuery = targetItem ? (targetItem.codigo || targetItem.descricao) : '';
+    setModalSearchQuery(initialQuery);
+    setSelectedTabCotacoes('HISTORICO');
+    setShowCotacoesModal(true);
+  };
+
+  // Aplicar preço da cotação consultada para a linha do pedido
+  const handleApplyPriceFromModal = (novoPreco: number) => {
+    const novosItens = [...itens];
+    if (novosItens[activeItemIndexForModal]) {
+      const q = novosItens[activeItemIndexForModal].quant_1 || 1;
+      novosItens[activeItemIndexForModal] = {
+        ...novosItens[activeItemIndexForModal],
+        valor_unitario: novoPreco,
+        valor_total: q * novoPreco
+      };
+      setItens(novosItens);
+      setAppliedToast(`Preço de ${novoPreco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} aplicado no Item #${activeItemIndexForModal + 1}!`);
+      setTimeout(() => setAppliedToast(''), 3000);
+      setShowCotacoesModal(false);
+    }
+  };
+
+  // Item ativo no modal
+  const itemNoForm = itens[activeItemIndexForModal] || itens[0];
+
+  // Extrair histórico de cotações dos pedidos cadastrados
+  const historicalQuotes = React.useMemo(() => {
+    const term = (modalSearchQuery || itemNoForm?.codigo || itemNoForm?.descricao || '').toLowerCase().trim();
+    const results: Array<{
+      pedidoId: string;
+      numeroPedido: number;
+      dataEmissao: string;
+      clienteNome: string;
+      comprador?: string;
+      vendedorNome?: string;
+      quant: number;
+      unid: string;
+      valorUnitario: number;
+      valorTotal: number;
+      codigo: string;
+      descricao: string;
+    }> = [];
+
+    allPedidosHistory.forEach(ped => {
+      ped.itens?.forEach(it => {
+        const matchesCode = it.codigo && it.codigo.toLowerCase().includes(term);
+        const matchesDesc = it.descricao && it.descricao.toLowerCase().includes(term);
+        const matchesClient = ped.cliente_nome.toLowerCase().includes(term);
+        if (!term || matchesCode || matchesDesc || matchesClient) {
+          results.push({
+            pedidoId: ped.id,
+            numeroPedido: ped.numero_pedido,
+            dataEmissao: ped.data_emissao,
+            clienteNome: ped.cliente_nome,
+            comprador: ped.comprador,
+            vendedorNome: ped.vendedor_nome,
+            quant: it.quant_1,
+            unid: it.unid_1,
+            valorUnitario: it.valor_unitario,
+            valorTotal: it.valor_total,
+            codigo: it.codigo,
+            descricao: it.descricao
+          });
+        }
+      });
+    });
+
+    return results;
+  }, [allPedidosHistory, modalSearchQuery, itemNoForm]);
+
+  // Estatísticas de cotações para o item
+  const statsCotacao = React.useMemo(() => {
+    if (historicalQuotes.length === 0) {
+      return { min: 0, max: 0, avg: 0, totalCotacoes: 0 };
+    }
+    const valores = historicalQuotes.map(q => q.valorUnitario).filter(v => v > 0);
+    if (valores.length === 0) return { min: 0, max: 0, avg: 0, totalCotacoes: 0 };
+    const min = Math.min(...valores);
+    const max = Math.max(...valores);
+    const sum = valores.reduce((a, b) => a + b, 0);
+    const avg = sum / valores.length;
+    return { min, max, avg, totalCotacoes: valores.length };
+  }, [historicalQuotes]);
+
+  // Fornecedores filtrados no modal
+  const filteredFornecedoresModal = React.useMemo(() => {
+    const term = (modalSearchQuery || '').toLowerCase().trim();
+    if (!term) return fornecedores;
+    return fornecedores.filter(f => 
+      f.razao_social.toLowerCase().includes(term) ||
+      (f.nome_fantasia && f.nome_fantasia.toLowerCase().includes(term)) ||
+      f.categoria_material.toLowerCase().includes(term) ||
+      (f.contato_vendedor && f.contato_vendedor.toLowerCase().includes(term))
+    );
+  }, [fornecedores, modalSearchQuery]);
 
   const addItem = () => {
     if (itens.length >= 11) {
@@ -524,15 +646,27 @@ export default function OrderForm({ initialPedido }: Props) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={addItem}
-            disabled={itens.length >= 11}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Adicionar Linha</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleOpenCotacoesModal(0)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 border border-cyan-200 text-cyan-800 hover:bg-cyan-100 rounded-lg text-xs font-bold transition-all shadow-xs"
+              title="Acesso rápido ao histórico de cotações, compras anteriores e fornecedores"
+            >
+              <History className="w-3.5 h-3.5 text-cyan-600" />
+              <span>Consultar Cotações & Usinas</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={addItem}
+              disabled={itens.length >= 11}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Adicionar Linha</span>
+            </button>
+          </div>
         </div>
 
         {/* Tabela de Itens Editável */}
@@ -634,18 +768,30 @@ export default function OrderForm({ initialPedido }: Props) {
                         placeholder="Ex: PLACA POLICARBONATO CRISTAL 2050 X 1000 X 4MM 39206100"
                         className="w-full p-1 text-xs font-semibold uppercase border rounded"
                       />
-                      {/* Sugestão de produtos rápidos */}
-                      <div className="flex gap-1 overflow-x-auto text-[9px] text-slate-400">
-                        {produtos.slice(0, 3).map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => handleSelectProduto(idx, p.codigo)}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-1 py-0.5 rounded whitespace-nowrap"
-                          >
-                            + {p.codigo}
-                          </button>
-                        ))}
+                      {/* Sugestão de produtos rápidos + Botão de Cotações */}
+                      <div className="flex items-center justify-between gap-1 overflow-x-auto text-[9px] text-slate-400 pt-0.5">
+                        <div className="flex gap-1">
+                          {produtos.slice(0, 3).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => handleSelectProduto(idx, p.codigo)}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-1 py-0.5 rounded whitespace-nowrap"
+                            >
+                              + {p.codigo}
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCotacoesModal(idx)}
+                          className="flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 whitespace-nowrap transition-colors"
+                          title="Consultar cotações e compras para este produto"
+                        >
+                          <History className="w-3 h-3 text-blue-600" />
+                          <span>Cotações & Compras</span>
+                        </button>
                       </div>
                     </div>
                   </td>
@@ -859,6 +1005,248 @@ export default function OrderForm({ initialPedido }: Props) {
           <span>Salvar & Emitir Espelho do Pedido</span>
         </button>
       </div>
+
+      {/* TOAST DE FEEDBACK DE PREÇO APLICADO */}
+      {appliedToast && (
+        <div className="fixed top-20 right-6 z-50 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-2.5 animate-bounce">
+          <Check className="w-4 h-4 text-white" />
+          <span>{appliedToast}</span>
+        </div>
+      )}
+
+      {/* MODAL / SLIDE-OVER DE CONSULTA RÁPIDA DE COTAÇÕES E USINAS */}
+      {showCotacoesModal && (
+        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm flex justify-end animate-fadeIn no-print">
+          <div className="w-full sm:max-w-xl md:w-1/2 lg:w-1/2 bg-white h-full shadow-2xl flex flex-col justify-between border-l border-slate-200 overflow-y-auto">
+            
+            {/* CABEÇALHO DO MODAL */}
+            <div className="p-5 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-20">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+                    <span>Consulta de Cotações & Usinas</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white">
+                      Item #{activeItemIndexForModal + 1}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Histórico praticado e tabela de usinas parceiras
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCotacoesModal(false)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* CORPO DO MODAL */}
+            <div className="p-6 space-y-5 flex-1 bg-slate-50">
+              
+              {/* CAMPO DE BUSCA RÁPIDA NO MODAL */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Pesquisar por Código, Descrição ou Nome do Cliente / Usina
+                </label>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={modalSearchQuery}
+                    onChange={(e) => setModalSearchQuery(e.target.value)}
+                    placeholder="Ex: 450, Policarbonato, Tubo Inox, GE..."
+                    className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 font-semibold uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* STATS RÁPIDAS DO ITEM */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Preço Médio Cotado</p>
+                  <p className="text-base font-black text-blue-900 mt-0.5">
+                    {statsCotacao.avg ? statsCotacao.avg.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+                  </p>
+                  <span className="text-[9px] text-slate-500 font-medium">({statsCotacao.totalCotacoes} ocorrências)</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[9px] font-bold text-emerald-600 uppercase">Menor Preço Praticado</p>
+                  <p className="text-base font-black text-emerald-700 mt-0.5">
+                    {statsCotacao.min ? statsCotacao.min.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+                  </p>
+                  <span className="text-[9px] text-emerald-600 font-medium">Melhor histórico</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[9px] font-bold text-purple-600 uppercase">Maior Preço Cotado</p>
+                  <p className="text-base font-black text-purple-700 mt-0.5">
+                    {statsCotacao.max ? statsCotacao.max.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+                  </p>
+                  <span className="text-[9px] text-slate-500 font-medium">Limite superior</span>
+                </div>
+              </div>
+
+              {/* TABS DO MODAL */}
+              <div className="flex border-b border-slate-200 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTabCotacoes('HISTORICO')}
+                  className={`pb-2 px-3 text-xs font-bold transition-all border-b-2 ${
+                    selectedTabCotacoes === 'HISTORICO'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  📝 Cotações & Pedidos Anteriores ({historicalQuotes.length})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTabCotacoes('FORNECEDORES')}
+                  className={`pb-2 px-3 text-xs font-bold transition-all border-b-2 ${
+                    selectedTabCotacoes === 'FORNECEDORES'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  🏭 Usinas & Fornecedores ({filteredFornecedoresModal.length})
+                </button>
+              </div>
+
+              {/* CONTEÚDO DA ABA 1: HISTÓRICO DE PEDIDOS */}
+              {selectedTabCotacoes === 'HISTORICO' && (
+                <div className="space-y-3">
+                  {historicalQuotes.length === 0 ? (
+                    <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-xs text-slate-400">
+                      Nenhum histórico de cotação ou compra encontrado para o termo pesquisado.
+                    </div>
+                  ) : (
+                    historicalQuotes.map((q, idx) => (
+                      <div 
+                        key={idx} 
+                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all space-y-2"
+                      >
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-blue-900 text-xs">#{q.numeroPedido}</span>
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              {new Date(q.dataEmissao).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+
+                          <span className="text-sm font-black text-emerald-600">
+                            {q.valorUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / {q.unid}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Cliente</span>
+                            <span className="font-bold text-slate-800 uppercase">{q.clienteNome}</span>
+                            {q.comprador && (
+                              <div className="text-[10px] text-slate-500">Comprador: {q.comprador}</div>
+                            )}
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Item / Vendedor</span>
+                            <span className="font-semibold text-slate-700 truncate block">{q.descricao}</span>
+                            <div className="text-[10px] text-slate-500">Vendedor: {q.vendedorNome || 'Lucc Bispo'}</div>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleApplyPriceFromModal(q.valorUnitario)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition-all"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Aplicar Preço de {q.valorUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* CONTEÚDO DA ABA 2: USINAS E FORNECEDORES */}
+              {selectedTabCotacoes === 'FORNECEDORES' && (
+                <div className="space-y-3">
+                  {filteredFornecedoresModal.length === 0 ? (
+                    <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-xs text-slate-400">
+                      Nenhuma usina ou fornecedor cadastrado para esta categoria.
+                    </div>
+                  ) : (
+                    filteredFornecedoresModal.map((f) => (
+                      <div 
+                        key={f.id} 
+                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-300 transition-all space-y-2"
+                      >
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <div>
+                            <h4 className="font-black text-slate-900 text-xs uppercase">{f.nome_fantasia || f.razao_social}</h4>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {f.categoria_material}
+                            </span>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Prazo Médio</span>
+                            <span className="font-extrabold text-indigo-950 text-xs">{f.prazo_medio_dias || 3} dias</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Contato Comercial Usina</span>
+                            <span className="font-semibold text-slate-800">{f.contato_vendedor || 'Vendas Internas'}</span>
+                            <div className="text-[10px] text-blue-600 font-bold">{f.telefone}</div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Condição Padrão</span>
+                            <span className="font-bold text-slate-800">{f.condicoes_pagamento_padrao || '28 DDL'}</span>
+                            <div className="text-[10px] text-slate-500">{f.cidade}/{f.uf}</div>
+                          </div>
+                        </div>
+
+                        {f.observacoes && (
+                          <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                            <strong>Obs Usina:</strong> {f.observacoes}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+            </div>
+
+            {/* RODAPÉ DO MODAL */}
+            <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCotacoesModal(false)}
+                className="px-5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+              >
+                Fechar Consulta
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </form>
   );
