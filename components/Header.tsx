@@ -12,10 +12,12 @@ import {
   LogOut, 
   Settings, 
   Camera, 
-  CheckCircle2,
-  Calendar,
   Globe,
-  Users
+  Users,
+  Plus,
+  MoreVertical,
+  Filter,
+  Download
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
@@ -53,95 +55,91 @@ export default function Header({ onToggleMobileMenu, isCollapsed }: HeaderProps)
     }
   };
 
-  const dataAtual = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-
   const getPerfilBadgeText = (perfil?: string) => {
     switch (perfil) {
       case 'MASTER':
-        return '👑 Master / Diretoria';
+        return 'Master / Diretoria';
       case 'COMERCIAL':
-        return '💼 Comercial';
+        return 'Comercial';
       case 'LOGISTICA':
-        return '🚚 Logística';
+        return 'Logística';
       case 'MOTORISTA':
-        return '📱 Motorista';
+        return 'Motorista';
       default:
         return 'Colaborador';
     }
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between no-print shadow-xs">
+    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-30 px-6 sm:px-8 flex items-center justify-between no-print">
       
-      {/* Lado Esquerdo: Botão Mobile + Informações Rápidas */}
-      <div className="flex items-center gap-3">
-        
+      {/* Lado Esquerdo: Mobile Trigger & Título da Área */}
+      <div className="flex items-center gap-4">
         {/* Botão Hambúrguer Mobile */}
         <button
           onClick={onToggleMobileMenu}
-          className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+          className="md:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors"
           aria-label="Abrir Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Data e Local */}
-        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-          <Calendar className="w-3.5 h-3.5 text-blue-600" />
-          <span className="capitalize">{dataAtual}</span>
-        </div>
-
-        <div className="hidden lg:flex items-center gap-1.5 text-xs font-bold text-slate-700">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Unidade São Paulo (Matriz)</span>
-        </div>
-
-        {/* Link para Landing Page pública */}
-        <Link
-          href="/"
-          className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-          title="Ver Site Institucional"
-        >
-          <Globe className="w-3.5 h-3.5" />
-          <span>Site Institucional</span>
-        </Link>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+          Dashboard
+        </h1>
       </div>
 
-      {/* Lado Direito: Notificações & Perfil do Usuário com Foto */}
+      {/* Lado Direito: Avatar stack, adicionar membros, opções e perfil */}
       <div className="flex items-center gap-3" ref={dropdownRef}>
         
-        {/* Botão de Notificações */}
+        {/* Grupo de Avatares estilo CRM colaborativo da imagem */}
+        <div className="hidden sm:flex items-center -space-x-2">
+          <img
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+            alt="Membro"
+            className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-2xs"
+          />
+          <img
+            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
+            alt="Membro"
+            className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-2xs"
+          />
+          <Link
+            href="/usuarios"
+            className="w-8 h-8 rounded-full border border-dashed border-slate-300 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors"
+            title="Adicionar colaborador"
+          >
+            <Plus className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* Notificações minimalistas */}
         <div className="relative">
           <button
             onClick={() => {
               setNotificationsOpen(!notificationsOpen);
               setDropdownOpen(false);
             }}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors relative"
-            title="Notificações da Expedição"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors relative"
+            title="Notificações"
           >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-blue-600 rounded-full ring-2 ring-white"></span>
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#10b981] rounded-full"></span>
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 space-y-3 z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center justify-between border-b pb-2">
-                <h4 className="font-extrabold text-xs uppercase text-slate-800">Notificações</h4>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">2 Novas</span>
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 space-y-3 z-50">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h4 className="font-bold text-xs text-slate-800">Notificações</h4>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">2 novas</span>
               </div>
               <div className="space-y-2 text-xs">
-                <div className="p-2 bg-blue-50/60 rounded-xl border border-blue-100 space-y-0.5">
-                  <p className="font-bold text-slate-800">🚚 Motorista José Carlos em rota</p>
-                  <p className="text-[11px] text-slate-500">Romaneio #201 saiu para entrega na GE e Alvorada.</p>
+                <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
+                  <p className="font-semibold text-slate-800">🚚 Romaneio #201 em rota</p>
+                  <p className="text-[11px] text-slate-500">Motorista Carlos Eduardo iniciou as entregas.</p>
                 </div>
-                <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 space-y-0.5">
-                  <p className="font-bold text-slate-800">📄 Pedido #1042 Aprovado</p>
+                <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
+                  <p className="font-semibold text-slate-800">📄 Pedido #1042 Aprovado</p>
                   <p className="text-[11px] text-slate-500">Cliente GE - 60 DDL (R$ 505,70).</p>
                 </div>
               </div>
@@ -149,66 +147,42 @@ export default function Header({ onToggleMobileMenu, isCollapsed }: HeaderProps)
           )}
         </div>
 
-        <div className="h-6 w-px bg-slate-200"></div>
-
-        {/* PERFIL DO USUÁRIO LOGADO COM FOTO */}
+        {/* Menu 3 pontinhos */}
         <div className="relative">
           <button
             onClick={() => {
               setDropdownOpen(!dropdownOpen);
               setNotificationsOpen(false);
             }}
-            className="flex items-center gap-3 p-1.5 sm:px-3 rounded-2xl hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200 text-left group"
+            className="w-8 h-8 rounded-xl border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
           >
-            {/* Foto de Perfil */}
-            <div className="relative">
-              <img
-                src={user?.foto_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                alt={user?.nome || 'Usuário'}
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-600/30 group-hover:ring-blue-600 transition-all shadow-sm"
-              />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
-            </div>
-
-            {/* Nome e Cargo */}
-            <div className="hidden sm:block">
-              <div className="text-xs font-black text-slate-900 leading-tight">
-                {user?.nome || 'Márcio Santos'}
-              </div>
-              <div className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">
-                {user?.cargo || 'Diretoria Master'}
-              </div>
-            </div>
-
-            <ChevronDown className={`w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            <MoreVertical className="w-4 h-4" />
           </button>
 
-          {/* Menu Dropdown do Usuário */}
+          {/* Menu Dropdown */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-50">
               
               {/* Header do Menu */}
               <div className="p-3 border-b border-slate-100 flex items-center gap-3">
                 <img
                   src={user?.foto_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                   alt={user?.nome || 'Usuário'}
-                  className="w-11 h-11 rounded-full object-cover ring-2 ring-blue-600"
+                  className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200"
                 />
                 <div className="overflow-hidden">
-                  <h4 className="font-extrabold text-xs text-slate-900 truncate">{user?.nome || 'Usuário'}</h4>
-                  <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-                  <span className="inline-block mt-0.5 text-[9px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                  <h4 className="font-bold text-xs text-slate-900 truncate">{user?.nome || 'Usuário'}</h4>
+                  <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                  <span className="inline-block mt-1 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
                     {getPerfilBadgeText(user?.perfil)}
                   </span>
                 </div>
               </div>
 
               {/* Ações */}
-              <div className="py-1.5 text-xs font-semibold text-slate-700 space-y-0.5">
-                
-                {/* Alterar Foto */}
-                <label className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors">
-                  <Camera className="w-4 h-4 text-blue-600" />
+              <div className="py-2 text-xs font-medium text-slate-600 space-y-0.5">
+                <label className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                  <Camera className="w-4 h-4 text-slate-400" />
                   <span>Alterar Minha Foto</span>
                   <input
                     type="file"
@@ -222,37 +196,36 @@ export default function Header({ onToggleMobileMenu, isCollapsed }: HeaderProps)
                   <Link
                     href="/usuarios"
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-700 cursor-pointer"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors text-slate-600"
                   >
-                    <Users className="w-4 h-4 text-purple-600" />
-                    <span>Gestão de Usuários & Perfis</span>
+                    <Users className="w-4 h-4 text-slate-400" />
+                    <span>Gestão de Usuários</span>
                   </Link>
                 )}
 
                 <Link
                   href="/"
                   onClick={() => setDropdownOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-700 cursor-pointer"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors text-slate-600"
                 >
-                  <Globe className="w-4 h-4 text-cyan-600" />
-                  <span>Ver Site Institucional</span>
+                  <Globe className="w-4 h-4 text-slate-400" />
+                  <span>Site Institucional</span>
                 </Link>
               </div>
 
-              {/* Sair / Logout */}
+              {/* Logout */}
               <div className="pt-1.5 border-t border-slate-100">
                 <button
                   onClick={() => {
                     setDropdownOpen(false);
                     logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Encerrar Sessão / Sair</span>
+                  <span>Encerrar Sessão</span>
                 </button>
               </div>
-
             </div>
           )}
         </div>

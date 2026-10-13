@@ -18,7 +18,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col text-slate-900">
       {/* Sidebar Lateral Retrátil com controle de permissões */}
       <Sidebar
         isCollapsed={isCollapsed}

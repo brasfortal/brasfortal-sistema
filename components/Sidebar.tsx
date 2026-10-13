@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { 
@@ -19,7 +19,18 @@ import {
   Database,
   LucideIcon,
   ShieldCheck,
-  Globe
+  Search,
+  LayoutDashboard,
+  Bell,
+  CheckSquare,
+  StickyNote,
+  Mail,
+  Calendar,
+  BarChart3,
+  UserCheck,
+  Share2,
+  LifeBuoy,
+  ChevronDown
 } from 'lucide-react';
 import { StorageService } from '@/lib/storage';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -52,46 +63,41 @@ interface SidebarProps {
 
 const menuSections: MenuSection[] = [
   {
-    title: 'Comercial',
+    title: 'Main Menu',
     requiredRole: ['MASTER', 'COMERCIAL'],
     items: [
-      { href: '/dashboard', label: 'Painel & Pedidos', icon: FileText, exact: true },
-      { href: '/pedidos/novo', label: 'Novo Pedido (Espelho)', icon: PlusCircle, highlight: true },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+      { href: '/pedidos/novo', label: 'Novo Pedido', icon: PlusCircle, highlight: true },
+      { href: '/logistica', label: 'Logística & Frota', icon: Truck, requiredRole: ['MASTER', 'LOGISTICA'] },
     ]
   },
   {
-    title: 'Logística',
-    requiredRole: ['MASTER', 'LOGISTICA', 'MOTORISTA'],
-    items: [
-      { href: '/logistica', label: 'Logística & Expedição', icon: Truck, requiredRole: ['MASTER', 'LOGISTICA'] },
-      { href: '/motorista', label: 'Terminal do Motorista', icon: Smartphone, tag: 'Mobile', requiredRole: ['MASTER', 'LOGISTICA', 'MOTORISTA'] },
-    ]
-  },
-  {
-    title: 'Cadastros',
+    title: 'Record',
     requiredRole: ['MASTER', 'COMERCIAL', 'LOGISTICA'],
     items: [
-      { href: '/cadastros?tab=produtos', label: 'Produtos / Metais', icon: Package, tabKey: 'produtos' },
       { href: '/cadastros?tab=clientes', label: 'Clientes & Compradores', icon: Building2, tabKey: 'clientes' },
+      { href: '/cadastros?tab=produtos', label: 'Produtos / Metais', icon: Package, tabKey: 'produtos' },
       { href: '/cadastros?tab=fornecedores', label: 'Fornecedores / Usinas', icon: Factory, tabKey: 'fornecedores' },
-      { href: '/cadastros?tab=motoristas', label: 'Motoristas & Frota', icon: Users, tabKey: 'motoristas' },
+      { href: '/motorista', label: 'Terminal Motorista', icon: Smartphone, tag: 'Mobile', requiredRole: ['MASTER', 'LOGISTICA', 'MOTORISTA'] },
     ]
   },
   {
     title: 'Administração',
     requiredRole: ['MASTER'],
     items: [
-      { href: '/usuarios', label: 'Usuários & Permissões', icon: ShieldCheck, tag: 'Master' },
+      { href: '/usuarios', label: 'Equipe & Permissões', icon: ShieldCheck, tag: 'Master' },
     ]
   }
 ];
 
 function SidebarNavList({ 
   isCollapsed, 
-  setIsMobileOpen 
+  setIsMobileOpen,
+  searchFilter
 }: { 
   isCollapsed: boolean; 
   setIsMobileOpen: (v: boolean) => void; 
+  searchFilter: string;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -109,21 +115,22 @@ function SidebarNavList({
     return pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
   };
 
-  // Filtrar seções e itens conforme perfil do usuário
   const visibleSections = menuSections
     .filter(section => !section.requiredRole || section.requiredRole.includes(userRole))
     .map(section => ({
       ...section,
-      items: section.items.filter(item => !item.requiredRole || item.requiredRole.includes(userRole))
+      items: section.items
+        .filter(item => !item.requiredRole || item.requiredRole.includes(userRole))
+        .filter(item => !searchFilter || item.label.toLowerCase().includes(searchFilter.toLowerCase()))
     }))
     .filter(section => section.items.length > 0);
 
   return (
-    <div className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+    <div className="flex-1 py-2 px-3 space-y-5 overflow-y-auto">
       {visibleSections.map((section, sIdx) => (
         <div key={sIdx} className="space-y-1">
           {!isCollapsed && (
-            <div className="px-3 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <div className="px-3 pb-1 text-[11px] font-medium text-slate-400">
               {section.title}
             </div>
           )}
@@ -138,26 +145,26 @@ function SidebarNavList({
                 href={item.href}
                 onClick={() => setIsMobileOpen(false)}
                 title={isCollapsed ? item.label : undefined}
-                className={`group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all relative ${
+                className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13px] font-medium transition-all relative ${
                   active
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold'
+                    ? 'bg-[#e6f7f2] text-[#0d9488] font-semibold'
                     : item.highlight
-                    ? 'text-blue-400 hover:bg-blue-950/50 hover:text-blue-300 border border-blue-900/40'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                } ${isCollapsed ? 'justify-center' : ''}`}
+                    ? 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-dashed border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                } ${isCollapsed ? 'justify-center px-2' : ''}`}
               >
-                <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
-                  active ? 'text-white' : item.highlight ? 'text-blue-400' : 'text-slate-400 group-hover:text-white'
+                <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-105 ${
+                  active ? 'text-[#0d9488]' : 'text-slate-400 group-hover:text-slate-600'
                 }`} />
 
                 {!isCollapsed && (
                   <div className="flex-1 flex items-center justify-between overflow-hidden">
-                    <span className="truncate text-xs">{item.label}</span>
+                    <span className="truncate">{item.label}</span>
                     {item.tag && (
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                         item.tag === 'Master' 
-                          ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' 
-                          : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          ? 'bg-purple-50 text-purple-600 border border-purple-200' 
+                          : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                       }`}>
                         {item.tag}
                       </span>
@@ -167,7 +174,7 @@ function SidebarNavList({
 
                 {/* Tooltip quando recolhido */}
                 {isCollapsed && (
-                  <div className="hidden group-hover:block fixed left-20 ml-2 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-xl border border-slate-700 whitespace-nowrap z-50 pointer-events-none">
+                  <div className="hidden group-hover:block fixed left-20 ml-2 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-xl border border-slate-800 whitespace-nowrap z-50 pointer-events-none">
                     {item.label}
                   </div>
                 )}
@@ -176,6 +183,31 @@ function SidebarNavList({
           })}
         </div>
       ))}
+
+      {/* Seção Extra estilo CRM Moderno: Suporte & Atalhos */}
+      {!isCollapsed && (
+        <div className="pt-2 border-t border-slate-100 space-y-1">
+          <Link
+            href="/usuarios"
+            onClick={() => setIsMobileOpen(false)}
+            className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-[13px] text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+          >
+            <UserCheck className="w-4 h-4 text-slate-400" />
+            <span>Invite Team</span>
+          </Link>
+          <button
+            onClick={() => {
+              if (confirm('Deseja restaurar os dados de demonstração da Brasfortal?')) {
+                StorageService.resetToDefault();
+              }
+            }}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl text-[13px] text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors text-left"
+          >
+            <RotateCcw className="w-4 h-4 text-slate-400" />
+            <span>Reset Demo Data</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -186,11 +218,8 @@ export default function Sidebar({
   isMobileOpen, 
   setIsMobileOpen 
 }: SidebarProps) {
-  const handleReset = () => {
-    if (confirm('Deseja restaurar os dados de demonstração da Brasfortal?')) {
-      StorageService.resetToDefault();
-    }
-  };
+  const [searchTerm, setSearchTerm] = useState('');
+  const { user } = useAuth();
 
   return (
     <>
@@ -198,31 +227,36 @@ export default function Sidebar({
       {isMobileOpen && (
         <div 
           onClick={() => setIsMobileOpen(false)}
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity"
         />
       )}
 
-      {/* Barra Lateral (Sidebar) */}
+      {/* Barra Lateral (Sidebar) com Estilo Minimalista e Limpo */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 bg-slate-950 text-white border-r border-slate-800 transition-all duration-300 ease-in-out flex flex-col no-print
+        className={`fixed top-0 bottom-0 left-0 z-40 bg-white text-slate-700 border-r border-slate-200/80 transition-all duration-300 ease-in-out flex flex-col no-print
           ${isCollapsed ? 'w-20' : 'w-64'}
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        {/* Topo / Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80">
-          <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black text-lg text-white shadow-md shadow-blue-500/20 shrink-0 group-hover:scale-105 transition-transform">
-              BF
+        {/* Topo / Logo Clean */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100">
+          <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden group">
+            {/* Ícone Redondo com gradiente verde/menta similar ao da imagem */}
+            <div className="w-9 h-9 rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10" />
+                <path d="m16 8 4 4-4 4" />
+                <path d="M8 12h12" />
+              </svg>
             </div>
             
             {!isCollapsed && (
               <div className="transition-opacity duration-200 whitespace-nowrap">
-                <div className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
+                <div className="font-extrabold text-sm tracking-tight text-slate-900 flex items-center gap-1.5">
                   BRASFORTAL
                 </div>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                  Metais & Conexões
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Metais & Gestão
                 </p>
               </div>
             )}
@@ -231,71 +265,87 @@ export default function Sidebar({
           {/* Botão fechar no mobile */}
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg"
+            className="md:hidden p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Barra de Busca rápida no Menu (como na imagem de referência) */}
+        {!isCollapsed && (
+          <div className="px-3 pt-3 pb-1">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-12 py-1.5 text-xs bg-slate-50 border border-slate-200/80 rounded-xl placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] focus:bg-white transition-all text-slate-800"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[9px] font-semibold text-slate-400 bg-white border border-slate-200 px-1 py-0.5 rounded">
+                <span>⌘</span>
+                <span>K</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Navegação Principal embrulhada em Suspense para SSR seguro */}
-        <Suspense fallback={<div className="flex-1 p-4 text-xs text-slate-500">Carregando menu...</div>}>
+        <Suspense fallback={<div className="flex-1 p-4 text-xs text-slate-400">Carregando menu...</div>}>
           <SidebarNavList 
             isCollapsed={isCollapsed} 
             setIsMobileOpen={setIsMobileOpen} 
+            searchFilter={searchTerm}
           />
         </Suspense>
 
-        {/* Rodapé da Sidebar */}
-        <div className="p-3 border-t border-slate-800/80 space-y-2">
-          
-          {/* Status do Banco */}
+        {/* Perfil no Rodapé da Sidebar (estilo card na imagem) */}
+        <div className="p-3 border-t border-slate-100">
           {!isCollapsed ? (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
-              <Database className={`w-4 h-4 shrink-0 ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`} />
-              <div className="flex-1 truncate">
-                <p className="font-bold text-slate-200 text-[11px] truncate">
-                  {isSupabaseConfigured ? 'Supabase Nuvem' : 'Armazenamento Local'}
-                </p>
-                <p className="text-[9px] text-slate-500">Sincronizado</p>
+            <div className="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition-colors group cursor-pointer">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <img
+                  src={user?.foto_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                  alt={user?.nome || 'Usuário'}
+                  className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200"
+                />
+                <div className="truncate">
+                  <p className="font-semibold text-xs text-slate-900 truncate">
+                    {user?.nome || 'Márcio Santos'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {user?.email || 'marciorsantos05@gmail.com'}
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5" />
             </div>
           ) : (
-            <div 
-              className="flex justify-center p-2 rounded-xl bg-slate-900 text-slate-400"
-              title={isSupabaseConfigured ? 'Supabase Nuvem' : 'Armazenamento Local'}
-            >
-              <Database className={`w-4 h-4 ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <div className="flex justify-center py-1">
+              <img
+                src={user?.foto_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                alt={user?.nome || 'Usuário'}
+                className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+              />
             </div>
           )}
-
-          {/* Botão de Reset Demo */}
-          <button
-            onClick={handleReset}
-            title="Restaurar dados padrão"
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-900 transition-colors ${
-              isCollapsed ? 'justify-center' : ''
-            }`}
-          >
-            <RotateCcw className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Restaurar Demo</span>}
-          </button>
 
           {/* Botão Recolher/Expandir (Desktop) */}
           <button
             onClick={() => setIsCollapsed(prev => !prev)}
-            className="hidden md:flex w-full items-center justify-center p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors border border-slate-800"
+            className="hidden md:flex mt-2 w-full items-center justify-center py-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
             title={isCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-blue-400" />
+              <ChevronRight className="w-4 h-4 text-slate-500" />
             ) : (
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <ChevronLeft className="w-4 h-4 text-blue-400" />
-                <span>Recolher Barra</span>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Recolher</span>
               </div>
             )}
           </button>
-
         </div>
       </aside>
     </>
