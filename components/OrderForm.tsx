@@ -1019,20 +1019,20 @@ export default function OrderForm({ initialPedido }: Props) {
         <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm flex justify-end animate-fadeIn no-print">
           <div className="w-full sm:max-w-xl md:w-1/2 lg:w-1/2 bg-white h-full shadow-2xl flex flex-col justify-between border-l border-slate-200 overflow-y-auto">
             
-            {/* CABEÇALHO DO MODAL */}
-            <div className="p-5 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-20">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            {/* CABEÇALHO DO MODAL CLEAN MODERNO */}
+            <div className="h-20 px-6 sm:px-8 border-b border-slate-100 bg-white flex items-center justify-between sticky top-0 z-20">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#e6f7f2] text-[#10b981] flex items-center justify-center font-bold">
                   <History className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+                  <h3 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
                     <span>Consulta de Cotações & Usinas</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white">
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                       Item #{activeItemIndexForModal + 1}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-slate-400 mt-0.5">
                     Histórico praticado e tabela de usinas parceiras
                   </p>
                 </div>
@@ -1041,9 +1041,9 @@ export default function OrderForm({ initialPedido }: Props) {
               <button
                 type="button"
                 onClick={() => setShowCotacoesModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="w-9 h-9 rounded-2xl border border-slate-200/80 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1095,29 +1095,29 @@ export default function OrderForm({ initialPedido }: Props) {
               </div>
 
               {/* TABS DO MODAL */}
-              <div className="flex border-b border-slate-200 gap-2">
+              <div className="flex border-b border-slate-200 gap-4">
                 <button
                   type="button"
                   onClick={() => setSelectedTabCotacoes('HISTORICO')}
-                  className={`pb-2 px-3 text-xs font-bold transition-all border-b-2 ${
+                  className={`pb-2.5 px-1 text-xs font-semibold transition-all border-b-2 ${
                     selectedTabCotacoes === 'HISTORICO'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-[#10b981] text-[#0d9488] font-bold'
+                      : 'border-transparent text-slate-400 hover:text-slate-700'
                   }`}
                 >
-                  📝 Cotações & Pedidos Anteriores ({historicalQuotes.length})
+                  Cotações & Pedidos Anteriores ({historicalQuotes.length})
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedTabCotacoes('FORNECEDORES')}
-                  className={`pb-2 px-3 text-xs font-bold transition-all border-b-2 ${
+                  className={`pb-2.5 px-1 text-xs font-semibold transition-all border-b-2 ${
                     selectedTabCotacoes === 'FORNECEDORES'
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-[#10b981] text-[#0d9488] font-bold'
+                      : 'border-transparent text-slate-400 hover:text-slate-700'
                   }`}
                 >
-                  🏭 Usinas & Fornecedores ({filteredFornecedoresModal.length})
+                  Usinas & Fornecedores ({filteredFornecedoresModal.length})
                 </button>
               </div>
 
@@ -1234,11 +1234,11 @@ export default function OrderForm({ initialPedido }: Props) {
             </div>
 
             {/* RODAPÉ DO MODAL */}
-            <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
+            <div className="p-5 border-t border-slate-100 bg-white flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowCotacoesModal(false)}
-                className="px-5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                className="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-colors"
               >
                 Fechar Consulta
               </button>

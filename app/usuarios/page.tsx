@@ -351,20 +351,25 @@ export default function UsuariosPage() {
           <div 
             className="w-full sm:max-w-xl md:w-1/2 lg:w-1/2 bg-white h-full shadow-2xl flex flex-col justify-between border-l border-slate-200 animate-slideLeft overflow-y-auto"
           >
-            {/* Cabeçalho do Drawer */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 sticky top-0 z-10">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-bold text-slate-800">
-                  {editingUser ? 'Editar Permissões do Usuário' : 'Novo Usuário do Sistema'}
-                </h2>
+            {/* Cabeçalho do Drawer Clean Moderno */}
+            <div className="h-20 px-6 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#e6f7f2] flex items-center justify-center text-[#10b981] font-bold">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                    {editingUser ? 'Editar Usuário' : 'Novo Usuário do Sistema'}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Defina permissões e detalhes de acesso</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                className="w-9 h-9 rounded-2xl border border-slate-200/80 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -472,13 +477,13 @@ export default function UsuariosPage() {
                 <button
                   type="button"
                   onClick={() => setIsDrawerOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-105"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-[#10b981] hover:bg-[#059669] text-white rounded-2xl font-semibold text-xs shadow-xs transition-all hover:shadow-md"
                 >
                   <Save className="w-4 h-4" />
                   <span>Salvar Usuário</span>

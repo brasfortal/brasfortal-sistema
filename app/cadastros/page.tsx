@@ -1084,42 +1084,44 @@ function CadastrosContent() {
           drawerAberto ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Cabeçalho do Drawer */}
-        <div className="h-16 px-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold">
-              {editingId ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+        {/* Cabeçalho do Drawer Clean Moderno */}
+        <div className="h-20 px-6 sm:px-8 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#e6f7f2] flex items-center justify-center text-[#10b981] font-bold">
+              {editingId ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="font-extrabold text-sm uppercase tracking-wide">
-                {editingId ? 'Editar Cadastro' : 'Novo Cadastro'}
-                <span className="text-blue-400 ml-1 font-semibold">
-                  {tab === 'PRODUTOS' && '• Produto / Metal'}
-                  {tab === 'CLIENTES' && '• Cliente & Compradores'}
-                  {tab === 'FORNECEDORES' && '• Fornecedor / Usina'}
-                  {tab === 'MOTORISTAS' && `• ${drawerSubTipo}`}
+              <h3 className="font-bold text-base text-slate-900 tracking-tight flex items-center gap-2">
+                <span>{editingId ? 'Editar Cadastro' : 'Novo Cadastro'}</span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                  {tab === 'PRODUTOS' && 'Produto / Metal'}
+                  {tab === 'CLIENTES' && 'Cliente & Compradores'}
+                  {tab === 'FORNECEDORES' && 'Fornecedor / Usina'}
+                  {tab === 'MOTORISTAS' && drawerSubTipo}
                 </span>
               </h3>
-              <p className="text-[10px] text-slate-400">Preencha os campos abaixo e clique em salvar</p>
+              <p className="text-xs text-slate-400 mt-0.5">Preencha as informações para salvar no sistema</p>
             </div>
           </div>
 
           <button
             onClick={() => setDrawerAberto(false)}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+            className="w-9 h-9 rounded-2xl border border-slate-200/80 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Se for na aba Motoristas, alternar entre cadastrar Motorista ou Veículo */}
         {tab === 'MOTORISTAS' && !editingId && (
-          <div className="flex bg-slate-100 p-1 border-b border-slate-200">
+          <div className="flex bg-slate-50 p-2 border-b border-slate-100 gap-2">
             <button
               type="button"
               onClick={() => setDrawerSubTipo('MOTORISTA')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                drawerSubTipo === 'MOTORISTA' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600'
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
+                drawerSubTipo === 'MOTORISTA' 
+                  ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80 font-bold' 
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Motorista
@@ -1127,8 +1129,10 @@ function CadastrosContent() {
             <button
               type="button"
               onClick={() => setDrawerSubTipo('VEICULO')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                drawerSubTipo === 'VEICULO' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600'
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
+                drawerSubTipo === 'VEICULO' 
+                  ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80 font-bold' 
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Veículo / Caminhão
@@ -1269,13 +1273,17 @@ function CadastrosContent() {
               
               {/* DADOS DA EMPRESA */}
               <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b pb-2 flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-blue-600" />
-                  1. Dados Cadastrais da Empresa (CNPJ)
-                </h4>
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <div className="w-6 h-6 rounded-lg bg-[#e6f7f2] flex items-center justify-center text-[#10b981]">
+                    <Building2 className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-800">
+                    1. Dados Cadastrais da Empresa (CNPJ)
+                  </h4>
+                </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                     Razão Social *
                   </label>
                   <input
@@ -1284,13 +1292,13 @@ function CadastrosContent() {
                     value={cliForm.razao_social || ''}
                     onChange={(e) => setCliForm({ ...cliForm, razao_social: e.target.value })}
                     placeholder="Ex: GE ENERGIA E INDUSTRIA LTDA"
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 uppercase font-bold"
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200/90 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] font-semibold text-slate-800 uppercase"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                       Nome Fantasia
                     </label>
                     <input
@@ -1298,12 +1306,12 @@ function CadastrosContent() {
                       value={cliForm.nome_fantasia || ''}
                       onChange={(e) => setCliForm({ ...cliForm, nome_fantasia: e.target.value })}
                       placeholder="GE"
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 uppercase font-bold"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200/90 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] font-semibold text-slate-800 uppercase"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                       CNPJ *
                     </label>
                     <input
@@ -1312,14 +1320,14 @@ function CadastrosContent() {
                       value={cliForm.cnpj || ''}
                       onChange={(e) => setCliForm({ ...cliForm, cnpj: e.target.value })}
                       placeholder="33.435.231/0001-87"
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 font-mono font-bold"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200/90 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] font-mono font-bold text-slate-800"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                       Inscrição Estadual
                     </label>
                     <input
@@ -1327,26 +1335,26 @@ function CadastrosContent() {
                       value={cliForm.inscricao_estadual || ''}
                       onChange={(e) => setCliForm({ ...cliForm, inscricao_estadual: e.target.value })}
                       placeholder="086.123.456-0"
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200/90 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] text-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-blue-900 uppercase mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                       Condição de Pagamento Padrão
                     </label>
                     <input
                       type="text"
                       value={cliForm.condicao_pagamento_padrao || '30 DDL'}
                       onChange={(e) => setCliForm({ ...cliForm, condicao_pagamento_padrao: e.target.value })}
-                      placeholder="60 DDL"
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border-2 border-blue-300 bg-blue-50/50 font-bold text-blue-900 uppercase"
+                      placeholder="30 DDL"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200/90 bg-slate-50 focus:bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] font-semibold text-slate-800 uppercase"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                     Endereço Completo de Entrega Principal
                   </label>
                   <textarea
@@ -1354,20 +1362,22 @@ function CadastrosContent() {
                     value={cliForm.endereco_completo || ''}
                     onChange={(e) => setCliForm({ ...cliForm, endereco_completo: e.target.value })}
                     placeholder="Av. Industrial, 1500 - Galpão 3 - Campinas/SP"
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 font-medium"
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200/90 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#10b981] font-medium text-slate-800"
                   />
                 </div>
               </div>
 
               {/* SEÇÃO COMPLETA DE COMPRADORES */}
-              <div className="space-y-3 pt-3 border-t border-slate-200">
+              <div className="space-y-3 pt-3 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-blue-600" />
-                      2. Ficha de Compradores do Cliente ({compradoresTemp.length})
+                    <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-[#e6f7f2] flex items-center justify-center text-[#10b981]">
+                        <Users className="w-3.5 h-3.5" />
+                      </div>
+                      <span>2. Ficha de Compradores do Cliente ({compradoresTemp.length})</span>
                     </h4>
-                    <p className="text-[10px] text-slate-500">Cadastre a lista de pessoas que solicitam orçamentos e pedidos</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Cadastre a lista de pessoas que solicitam orçamentos e pedidos</p>
                   </div>
 
                   {!formNovoCompradorAberto && (
@@ -1388,19 +1398,19 @@ function CadastrosContent() {
                         });
                         setFormNovoCompradorAberto(true);
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold border border-blue-200 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e6f7f2] text-[#0d9488] hover:bg-[#ccf0e5] rounded-xl text-xs font-semibold transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Adicionar Comprador</span>
+                      <span>Adicionar Comprador</span>
                     </button>
                   )}
                 </div>
 
                 {/* MINI FORMULÁRIO DE COMPRADOR (ADICIONAR / EDITAR) */}
                 {formNovoCompradorAberto && (
-                  <div className="p-4 bg-blue-50/50 rounded-2xl border-2 border-blue-200 space-y-3 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center justify-between border-b border-blue-200/80 pb-2">
-                      <span className="font-extrabold text-xs text-blue-900 uppercase">
+                  <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                      <span className="font-bold text-xs text-slate-800">
                         {editingCompradorId ? 'Editar Ficha do Comprador' : 'Nova Ficha de Comprador'}
                       </span>
                       <button
@@ -1888,11 +1898,11 @@ function CadastrosContent() {
         </div>
 
         {/* Rodapé Fixo do Drawer com Botões de Ação */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
+        <div className="p-5 bg-white border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={() => setDrawerAberto(false)}
-            className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-colors"
+            className="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-colors"
           >
             Cancelar
           </button>
@@ -1908,7 +1918,7 @@ function CadastrosContent() {
                 ? 'form-drawer-fornecedor'
                 : (drawerSubTipo === 'MOTORISTA' ? 'form-drawer-motorista' : 'form-drawer-veiculo')
             }
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
+            className="flex items-center gap-2 px-6 py-2.5 bg-[#10b981] hover:bg-[#059669] text-white rounded-2xl font-semibold text-xs shadow-xs transition-all hover:shadow-md"
           >
             <Save className="w-4 h-4" />
             <span>{editingId ? 'Salvar Alterações' : 'Cadastrar'}</span>
