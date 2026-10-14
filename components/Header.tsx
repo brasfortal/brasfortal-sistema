@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   Menu, 
   Bell, 
@@ -27,10 +28,23 @@ interface HeaderProps {
 }
 
 export default function Header({ onToggleMobileMenu, isCollapsed }: HeaderProps) {
+  const pathname = usePathname();
   const { user, logout, updateCurrentUser } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const getPageTitle = () => {
+    if (pathname === '/dashboard') return 'Dashboard';
+    if (pathname === '/pedidos') return 'Pedidos & Vendas';
+    if (pathname === '/pedidos/novo') return 'Novo Pedido';
+    if (pathname.startsWith('/pedidos/')) return 'Espelho de Pedido';
+    if (pathname.startsWith('/cadastros')) return 'Cadastros & Registros';
+    if (pathname === '/logistica') return 'Logística & Expedição';
+    if (pathname === '/motorista') return 'Terminal do Motorista';
+    if (pathname === '/usuarios') return 'Gestão de Usuários';
+    return 'Brasfortal Metais';
+  };
 
   // Fechar dropdowns ao clicar fora
   useEffect(() => {
@@ -85,7 +99,7 @@ export default function Header({ onToggleMobileMenu, isCollapsed }: HeaderProps)
         </button>
 
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-          Dashboard
+          {getPageTitle()}
         </h1>
       </div>
 

@@ -67,7 +67,7 @@ const menuSections: MenuSection[] = [
     requiredRole: ['MASTER', 'COMERCIAL'],
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-      { href: '/pedidos/novo', label: 'Novo Pedido', icon: PlusCircle, highlight: true },
+      { href: '/pedidos', label: 'Pedidos', icon: FileText },
       { href: '/logistica', label: 'Logística & Frota', icon: Truck, requiredRole: ['MASTER', 'LOGISTICA'] },
     ]
   },
