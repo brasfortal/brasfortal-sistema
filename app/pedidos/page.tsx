@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Download,
   Eye,
+  Edit3,
   ExternalLink,
   ChevronDown
 } from 'lucide-react';
@@ -410,6 +411,14 @@ export default function PedidosPage() {
                     {/* Ações */}
                     <td className="py-4 px-5 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        <Link
+                          href={`/pedidos/${ped.id}/editar`}
+                          className="p-2 rounded-xl border border-slate-200/80 text-slate-500 hover:text-[#10b981] hover:border-[#10b981] hover:bg-emerald-50/50 transition-colors"
+                          title="Editar Pedido"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Link>
+
                         <Link
                           href={`/pedidos/${ped.id}`}
                           className="p-2 rounded-xl border border-slate-200/80 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"

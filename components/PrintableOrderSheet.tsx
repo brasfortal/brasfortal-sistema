@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Pedido } from '@/lib/types';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Edit3 } from 'lucide-react';
 import Link from 'next/link';
 
 interface Props {
@@ -43,23 +43,31 @@ export default function PrintableOrderSheet({ pedido, showActions = true }: Prop
     <div className="space-y-4">
       {/* Botões de Ação na Tela (Não são impressos) */}
       {showActions && (
-        <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
           <Link
-            href="/"
-            className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+            href="/pedidos"
+            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200/70"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar aos Pedidos</span>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs px-2.5 py-1 rounded-full font-semibold uppercase bg-blue-100 text-blue-800 border border-blue-200">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs px-3 py-1 rounded-full font-semibold uppercase bg-blue-50 text-blue-700 border border-blue-100">
               Status: {pedido.status.replace('_', ' ')}
             </span>
 
+            <Link
+              href={`/pedidos/${pedido.id}/editar`}
+              className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-semibold text-xs border border-slate-200/90 shadow-2xs transition-all hover:text-[#10b981]"
+            >
+              <Edit3 className="w-4 h-4 text-[#10b981]" />
+              <span>Editar Pedido</span>
+            </Link>
+
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm shadow-sm transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-xl font-semibold text-xs shadow-xs transition-all"
             >
               <Printer className="w-4 h-4" />
               <span>Imprimir Espelho Oficial (A4)</span>

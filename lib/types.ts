@@ -60,6 +60,38 @@ export interface Produto {
   estoque_atual?: number;
 }
 
+export type TipoOrigemEstoque = 'SOBRA_CORTE' | 'BARRA_INTEIRA' | 'CHAPA_INTEIRA' | 'RETALHO';
+
+export interface ItemEstoqueDimensional {
+  id: string;
+  codigo: string;
+  descricao: string;
+  material_id: string; // INOX_304, INOX_316, ACO_CARBONO, POLICARBONATO, ALUMINIO, LATAO
+  material_nome: string;
+  geometria: 'TUBO_REDONDO' | 'TUBO_QUADRADO' | 'CHAPA' | 'BARRA_REDONDA' | 'PERFIL_VIGA';
+  
+  // Dimensões Físicas
+  espessura_mm?: number;
+  largura_mm?: number;
+  comprimento_mm?: number;
+  comprimento_metros?: number; // Comprimento em metros lineares
+  diametro_externo_mm?: number;
+  parede_mm?: number;
+  diametro_barra_mm?: number;
+  
+  // Quantidade e Pesos
+  quantidade_pecas: number; // Ex: 1 barra, 3 chapas
+  metros_totais?: number; // Ex: 1 barra de 2m = 2m
+  peso_unitario_kg: number; // Ex: 2.0 kg
+  peso_total_kg: number; // Ex: 2.0 kg
+  
+  // Rastreabilidade e Localização
+  tipo_origem: TipoOrigemEstoque;
+  localizacao_galpao?: string; // Ex: "Cavalete 2 - Sobras"
+  data_entrada: string;
+  observacoes?: string;
+}
+
 export interface Vendedor {
   id: string;
   nome: string;

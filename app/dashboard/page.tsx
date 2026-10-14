@@ -27,6 +27,7 @@ import {
   Building2,
   ShieldCheck,
   Eye,
+  Edit3,
   FileSpreadsheet
 } from 'lucide-react';
 import { Pedido } from '@/lib/types';
@@ -554,9 +555,16 @@ export default function DashboardPage() {
                         </div>
                       </td>
 
-                      {/* Ações: Imprimir Espelho / Excluir */}
+                      {/* Ações: Editar / Imprimir Espelho / Excluir */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          <Link
+                            href={`/pedidos/${ped.id}/editar`}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-[#10b981] hover:bg-emerald-50 transition-colors"
+                            title="Editar Pedido"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </Link>
                           <Link
                             href={`/pedidos/${ped.id}`}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"

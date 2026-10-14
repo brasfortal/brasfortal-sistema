@@ -1,6 +1,6 @@
 'use client';
 
-import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, ParadaRomaneio, Usuario } from './types';
+import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, ParadaRomaneio, Usuario, ItemEstoqueDimensional } from './types';
 import { 
   INITIAL_CLIENTES, 
   INITIAL_FORNECEDORES, 
@@ -10,13 +10,15 @@ import {
   INITIAL_VEICULOS, 
   INITIAL_PEDIDOS, 
   INITIAL_ROMANEIOS,
-  INITIAL_USUARIOS 
+  INITIAL_USUARIOS,
+  INITIAL_ESTOQUE_DIMENSIONAL
 } from './mockData';
 
 const STORAGE_KEYS = {
   CLIENTES: 'brasfortal_clientes',
   FORNECEDORES: 'brasfortal_fornecedores',
   PRODUTOS: 'brasfortal_produtos',
+  ESTOQUE_DIMENSIONAL: 'brasfortal_estoque_dimensional',
   VENDEDORES: 'brasfortal_vendedores',
   MOTORISTAS: 'brasfortal_motoristas',
   VEICULOS: 'brasfortal_veiculos',
@@ -110,6 +112,28 @@ export const StorageService = {
     const current = StorageService.getProdutos();
     const updated = current.filter(p => p.id !== id);
     saveToStorage(STORAGE_KEYS.PRODUTOS, updated);
+    return updated;
+  },
+
+  // ESTOQUE DIMENSIONAL & RETALHOS (CRUD)
+  getEstoqueDimensional: (): ItemEstoqueDimensional[] => getFromStorage(STORAGE_KEYS.ESTOQUE_DIMENSIONAL, INITIAL_ESTOQUE_DIMENSIONAL),
+  saveItemEstoqueDimensional: (item: ItemEstoqueDimensional): ItemEstoqueDimensional[] => {
+    const current = StorageService.getEstoqueDimensional();
+    const index = current.findIndex(i => i.id === item.id);
+    let updated: ItemEstoqueDimensional[];
+    if (index >= 0) {
+      updated = [...current];
+      updated[index] = item;
+    } else {
+      updated = [item, ...current];
+    }
+    saveToStorage(STORAGE_KEYS.ESTOQUE_DIMENSIONAL, updated);
+    return updated;
+  },
+  deleteItemEstoqueDimensional: (id: string): ItemEstoqueDimensional[] => {
+    const current = StorageService.getEstoqueDimensional();
+    const updated = current.filter(i => i.id !== id);
+    saveToStorage(STORAGE_KEYS.ESTOQUE_DIMENSIONAL, updated);
     return updated;
   },
 

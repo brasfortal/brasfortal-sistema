@@ -30,7 +30,8 @@ import {
   UserCheck,
   Share2,
   LifeBuoy,
-  ChevronDown
+  ChevronDown,
+  Scale
 } from 'lucide-react';
 import { StorageService } from '@/lib/storage';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -68,6 +69,7 @@ const menuSections: MenuSection[] = [
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
       { href: '/pedidos', label: 'Pedidos', icon: FileText },
+      { href: '/estoque', label: 'Estoque & Retalhos', icon: Scale, tag: 'KG/M' },
       { href: '/logistica', label: 'Logística & Frota', icon: Truck, requiredRole: ['MASTER', 'LOGISTICA'] },
     ]
   },

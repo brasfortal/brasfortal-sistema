@@ -1,4 +1,4 @@
-import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, Usuario } from './types';
+import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, Usuario, ItemEstoqueDimensional } from './types';
 
 export const INITIAL_CLIENTES: Cliente[] = [
   {
@@ -554,6 +554,98 @@ export const INITIAL_USUARIOS: Usuario[] = [
     ativo: true,
     created_at: '2026-02-10T11:00:00.000Z',
     ultimo_login: '2026-09-23T07:45:00.000Z'
+  }
+];
+
+export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
+  {
+    id: 'est-1',
+    codigo: 'TB-304-1-SOBRA',
+    descricao: 'Tubo Inox 304 OD 1" x 1.50mm - Sobra de Corte',
+    material_id: 'INOX_304',
+    material_nome: 'Aço Inox AISI 304',
+    geometria: 'TUBO_REDONDO',
+    diametro_externo_mm: 25.4,
+    parede_mm: 1.5,
+    comprimento_metros: 2.0,
+    quantidade_pecas: 1,
+    metros_totais: 2.0,
+    peso_unitario_kg: 2.0,
+    peso_total_kg: 2.0,
+    tipo_origem: 'SOBRA_CORTE',
+    localizacao_galpao: 'Cavalete 2 - Sobras & Retalhos',
+    data_entrada: '2026-10-14',
+    observacoes: 'Sobra resultante de corte sob medida'
+  },
+  {
+    id: 'est-2',
+    codigo: 'TB-304-1-INT',
+    descricao: 'Tubo Inox 304 OD 1" x 1.50mm - Barra Padrão 6m',
+    material_id: 'INOX_304',
+    material_nome: 'Aço Inox AISI 304',
+    geometria: 'TUBO_REDONDO',
+    diametro_externo_mm: 25.4,
+    parede_mm: 1.5,
+    comprimento_metros: 6.0,
+    quantidade_pecas: 15,
+    metros_totais: 90.0,
+    peso_unitario_kg: 6.0,
+    peso_total_kg: 90.0,
+    tipo_origem: 'BARRA_INTEIRA',
+    localizacao_galpao: 'Rua A - Prateleira Tubos Inox',
+    data_entrada: '2026-10-10'
+  },
+  {
+    id: 'est-3',
+    codigo: 'PL-POLI-CRISTAL',
+    descricao: 'Placa Policarbonato Cristal 4mm - Retalho',
+    material_id: 'POLICARBONATO',
+    material_nome: 'Policarbonato Compacto',
+    geometria: 'CHAPA',
+    espessura_mm: 4.0,
+    largura_mm: 1000,
+    comprimento_mm: 1000,
+    quantidade_pecas: 2,
+    peso_unitario_kg: 4.80,
+    peso_total_kg: 9.60,
+    tipo_origem: 'RETALHO',
+    localizacao_galpao: 'Galpão 3 - Termoplásticos',
+    data_entrada: '2026-10-12',
+    observacoes: 'Metade de placa 2050x1000 cortada'
+  },
+  {
+    id: 'est-4',
+    codigo: 'CH-316-3MM',
+    descricao: 'Chapa Inox 316L 3.00mm x 1200 x 3000mm',
+    material_id: 'INOX_316',
+    material_nome: 'Aço Inox AISI 316 / 316L',
+    geometria: 'CHAPA',
+    espessura_mm: 3.0,
+    largura_mm: 1200,
+    comprimento_mm: 3000,
+    quantidade_pecas: 4,
+    peso_unitario_kg: 86.40,
+    peso_total_kg: 345.60,
+    tipo_origem: 'CHAPA_INTEIRA',
+    localizacao_galpao: 'Rua C - Gaveteiro Chapas Inox',
+    data_entrada: '2026-10-08'
+  },
+  {
+    id: 'est-5',
+    codigo: 'BR-304-1POL',
+    descricao: 'Barra Redonda Inox 304 1" (25.4mm) - 3 metros',
+    material_id: 'INOX_304',
+    material_nome: 'Aço Inox AISI 304',
+    geometria: 'BARRA_REDONDA',
+    diametro_barra_mm: 25.4,
+    comprimento_metros: 3.0,
+    quantidade_pecas: 6,
+    metros_totais: 18.0,
+    peso_unitario_kg: 12.08,
+    peso_total_kg: 72.48,
+    tipo_origem: 'BARRA_INTEIRA',
+    localizacao_galpao: 'Cavalete 4 - Barras Maciças',
+    data_entrada: '2026-10-11'
   }
 ];
 

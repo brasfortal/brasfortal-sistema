@@ -22,10 +22,21 @@ import {
   Filter,
   Check,
   ArrowUpRight,
-  HelpCircle
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  Scale
 } from 'lucide-react';
 import { Pedido, ItemPedido, ExpedicaoNF, Cliente, Produto, Vendedor, Fornecedor } from '@/lib/types';
 import { StorageService } from '@/lib/storage';
+import { useAuth } from '@/lib/auth';
+import { 
+  MATERIAIS_DENSIDADE, 
+  calcularPesoTeorico, 
+  analisarDescricaoProduto, 
+  ParametrosCalculoPeso, 
+  GeometriaTipo 
+} from '@/lib/weightCalculator';
 
 interface Props {
   initialPedido?: Pedido;
@@ -45,6 +56,31 @@ export default function OrderForm({ initialPedido }: Props) {
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [selectedTabCotacoes, setSelectedTabCotacoes] = useState<'HISTORICO' | 'FORNECEDORES'>('HISTORICO');
   const [appliedToast, setAppliedToast] = useState('');
+  const { user } = useAuth();
+
+  // Modal da Calculadora de Peso Teórico
+  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [calcRowIndex, setCalcRowIndex] = useState<number>(0);
+  const [calcParams, setCalcParams] = useState<ParametrosCalculoPeso>({
+    geometria: 'CHAPA',
+    materialKey: 'INOX_304',
+    espessura_mm: 4,
+    largura_mm: 1000,
+    comprimento_mm: 2000,
+    diametro_externo_mm: 25.4,
+    parede_mm: 1.5,
+    comprimento_metros: 6,
+    diametro_barra_mm: 25.4,
+    quantidade: 1
+  });
+
+  // Estado de Acordeão / Seções Retráteis (quando um abre, o outro fecha)
+  const [activeAccordionSection, setActiveAccordionSection] = useState<'CLIENTE' | 'ITENS'>(
+    initialPedido ? 'ITENS' : 'CLIENTE'
+  );
+
+  // Estado para autocomplete / sugestão rápida de produtos ao digitar a descrição
+  const [focusedProductRowIndex, setFocusedProductRowIndex] = useState<number | null>(null);
 
   // Form State
   const [tipo, setTipo] = useState<'ORCAMENTO' | 'PEDIDO'>(initialPedido?.tipo || 'PEDIDO');
@@ -52,7 +88,7 @@ export default function OrderForm({ initialPedido }: Props) {
     initialPedido?.data_emissao || new Date().toISOString().split('T')[0]
   );
   
-  // Cliente
+  // Cliente (inicia 100% limpo quando for Novo Pedido)
   const [clienteNome, setClienteNome] = useState(initialPedido?.cliente_nome || '');
   const [clienteCnpj, setClienteCnpj] = useState(initialPedido?.cliente_cnpj || '');
   const [clienteIe, setClienteIe] = useState(initialPedido?.cliente_ie || '');
@@ -61,17 +97,19 @@ export default function OrderForm({ initialPedido }: Props) {
   const [endereco, setEndereco] = useState(initialPedido?.endereco || '');
 
   // Logística e Condições
-  const [condicoesPagamento, setCondicoesPagamento] = useState(initialPedido?.condicoes_pagamento || '60 DDL');
+  const [condicoesPagamento, setCondicoesPagamento] = useState(initialPedido?.condicoes_pagamento || '30 DDL');
   const [pedidoClienteN, setPedidoClienteN] = useState(initialPedido?.pedido_cliente_n || '');
   const [localEntrega, setLocalEntrega] = useState(initialPedido?.local_entrega || '');
   const [transportadora, setTransportadora] = useState(initialPedido?.transportadora || '');
   const [localCobranca, setLocalCobranca] = useState(initialPedido?.local_cobranca || '');
 
-  // Vendedor
-  const [vendedorNome, setVendedorNome] = useState(initialPedido?.vendedor_nome || 'LUCC BISPO');
+  // Vendedor (Assume o usuário logado automaticamente)
+  const [vendedorNome, setVendedorNome] = useState(
+    initialPedido?.vendedor_nome || user?.nome || 'Márcio Santos'
+  );
   const [valorComissao, setValorComissao] = useState<number>(initialPedido?.valor_comissao || 0);
 
-  // Itens
+  // Itens (inicia com 1 linha vazia sem produto pré-selecionado)
   const [itens, setItens] = useState<ItemPedido[]>(
     initialPedido?.itens || [
       {
@@ -81,11 +119,11 @@ export default function OrderForm({ initialPedido }: Props) {
         quant_1: 1,
         unid_2: 'PÇ',
         quant_2: 1,
-        peso: 9.84,
-        codigo: '450',
-        descricao: 'PLACA POLICARBONATO CRISTAL. 2050 X 1000 X 4MM 39206100',
-        valor_unitario: 505.70,
-        valor_total: 505.70
+        peso: 0,
+        codigo: '',
+        descricao: '',
+        valor_unitario: 0,
+        valor_total: 0
       }
     ]
   );
@@ -113,8 +151,11 @@ export default function OrderForm({ initialPedido }: Props) {
     if (initialPedido?.cliente_cnpj) {
       const match = listCli.find(c => c.cnpj === initialPedido.cliente_cnpj);
       if (match) setSelectedClienteObj(match);
+    } else if (user?.nome && !initialPedido) {
+      // Garantir que o vendedor é o usuário logado para novo pedido
+      setVendedorNome(user.nome);
     }
-  }, [initialPedido]);
+  }, [initialPedido, user]);
 
   // Selecionar Cliente e autopreencher
   const handleSelectCliente = (cnpjOuId: string) => {
@@ -163,26 +204,89 @@ export default function OrderForm({ initialPedido }: Props) {
       item.valor_total = q * v;
     }
 
+    // Auto-cálculo de peso ao alterar a descrição ou a quantidade (se ainda não preenchido ou for chapa/tubo detectado)
+    if (field === 'descricao' || field === 'quant_1') {
+      const descParaCalculo = field === 'descricao' ? String(value) : item.descricao;
+      const qParaCalculo = field === 'quant_1' ? Number(value) : (item.quant_1 || 1);
+      
+      const parsed = analisarDescricaoProduto(descParaCalculo, qParaCalculo);
+      if (parsed) {
+        const resultado = calcularPesoTeorico(parsed);
+        if (resultado.pesoTotalKg > 0) {
+          item.peso = resultado.pesoTotalKg;
+        }
+      }
+    }
+
     novosItens[index] = item;
     setItens(novosItens);
   };
 
+  // Abrir Modal da Calculadora de Peso para uma linha
+  const handleOpenWeightModal = (index: number) => {
+    setCalcRowIndex(index);
+    const targetItem = itens[index];
+    const q = targetItem?.quant_1 || 1;
+    
+    // Tenta pré-carregar parâmetros a partir da descrição
+    const parsed = analisarDescricaoProduto(targetItem?.descricao || '', q);
+    if (parsed) {
+      setCalcParams(parsed);
+    } else {
+      setCalcParams({
+        geometria: 'CHAPA',
+        materialKey: 'INOX_304',
+        espessura_mm: 4,
+        largura_mm: 1000,
+        comprimento_mm: 2000,
+        diametro_externo_mm: 25.4,
+        parede_mm: 1.5,
+        comprimento_metros: 6,
+        diametro_barra_mm: 25.4,
+        quantidade: q
+      });
+    }
+    setShowWeightModal(true);
+  };
+
+  // Aplicar Peso Teórico calculado na linha do pedido
+  const handleApplyWeightFromModal = () => {
+    const resultado = calcularPesoTeorico(calcParams);
+    const novosItens = [...itens];
+    if (novosItens[calcRowIndex]) {
+      novosItens[calcRowIndex] = {
+        ...novosItens[calcRowIndex],
+        peso: resultado.pesoTotalKg
+      };
+      setItens(novosItens);
+      setAppliedToast(`Peso de ${resultado.pesoTotalKg} kg aplicado no Item #${calcRowIndex + 1}!`);
+      setTimeout(() => setAppliedToast(''), 3000);
+      setShowWeightModal(false);
+    }
+  };
+
   // Selecionar Produto do catálogo para uma linha
-  const handleSelectProduto = (index: number, produtoCodigo: string) => {
-    const prod = produtos.find(p => p.codigo === produtoCodigo);
+  const handleSelectProduto = (index: number, produtoOrCodigo: string | Produto) => {
+    const prod = typeof produtoOrCodigo === 'string' 
+      ? produtos.find(p => p.codigo === produtoOrCodigo)
+      : produtoOrCodigo;
+
     if (prod) {
       const novosItens = [...itens];
+      const quant = Number(novosItens[index].quant_1) || 1;
       novosItens[index] = {
         ...novosItens[index],
         codigo: prod.codigo,
         descricao: prod.descricao,
-        unid_1: prod.unidade_primaria,
-        unid_2: prod.unidade_secundaria || prod.unidade_primaria,
-        peso: (prod.peso_unitario || 0) * (novosItens[index].quant_1 || 1),
-        valor_unitario: prod.preco_venda_padrao,
-        valor_total: (novosItens[index].quant_1 || 1) * prod.preco_venda_padrao
+        unid_1: prod.unidade_primaria || 'PÇ',
+        unid_2: prod.unidade_secundaria || prod.unidade_primaria || 'PÇ',
+        quant_2: prod.fator_conversao ? quant * prod.fator_conversao : novosItens[index].quant_2,
+        peso: Number(((prod.peso_unitario || 0) * quant).toFixed(2)),
+        valor_unitario: prod.preco_venda_padrao || 0,
+        valor_total: quant * (prod.preco_venda_padrao || 0)
       };
       setItens(novosItens);
+      setFocusedProductRowIndex(null);
     }
   };
 
@@ -387,9 +491,14 @@ export default function OrderForm({ initialPedido }: Props) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-slate-900 flex items-center gap-2">
-              <span>{initialPedido ? `Editar Pedido #${initialPedido.numero_pedido}` : 'Novo Espelho de Pedido'}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+            <h1 className="text-xl font-black text-slate-900 flex flex-wrap items-center gap-2">
+              <span>
+                {initialPedido 
+                  ? `Editar Pedido #${initialPedido.numero_pedido}${clienteNome ? ` - ${clienteNome}` : ''}` 
+                  : (clienteNome ? `Novo Pedido - ${clienteNome}` : 'Novo Espelho de Pedido')
+                }
+              </span>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                 Ficha Oficial Brasfortal
               </span>
             </h1>
@@ -419,31 +528,67 @@ export default function OrderForm({ initialPedido }: Props) {
         </div>
       </div>
 
-      {/* BLOCO 1: CABEÇALHO DO CLIENTE & COMERCIAL */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-blue-600" />
-            <span>1. Dados do Cliente e Condições Comerciais</span>
-          </h2>
+      {/* BLOCO 1: CABEÇALHO DO CLIENTE & COMERCIAL (EXPANSÍVEL / RETRÁTIL) */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all">
+        <div className="p-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
+          <div 
+            onClick={() => setActiveAccordionSection(activeAccordionSection === 'CLIENTE' ? 'ITENS' : 'CLIENTE')}
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-[#e6f7f2] flex items-center justify-center text-[#10b981] font-bold">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 group-hover:text-[#10b981] transition-colors">
+                <span>1. Dados do Cliente e Condições Comerciais</span>
+                {clienteNome && activeAccordionSection !== 'CLIENTE' && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-normal">
+                    {clienteNome} {condicoesPagamento ? `(${condicoesPagamento})` : ''}
+                  </span>
+                )}
+              </h2>
+            </div>
+          </div>
 
-          {/* Autopreenchimento rápido com clientes cadastrados */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">Buscar Cliente:</span>
-            <select
-              onChange={(e) => handleSelectCliente(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border border-slate-300 bg-slate-50 font-medium text-slate-700"
-              defaultValue=""
+          <div className="flex items-center gap-3">
+            {/* Autopreenchimento rápido com clientes cadastrados */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium">Buscar Cliente:</span>
+              <select
+                onChange={(e) => {
+                  handleSelectCliente(e.target.value);
+                  if (activeAccordionSection !== 'CLIENTE') setActiveAccordionSection('CLIENTE');
+                }}
+                className="text-xs px-3 py-1.5 rounded-xl border border-slate-200/90 bg-slate-50 font-medium text-slate-700 focus:outline-none cursor-pointer"
+                defaultValue=""
+              >
+                <option value="" disabled>Selecione para preencher rápido...</option>
+                {clientes.map(c => (
+                  <option key={c.id} value={c.cnpj}>
+                    {c.nome_fantasia || c.razao_social} ({c.cnpj})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botão Retrair / Expandir Estilo Imagem */}
+            <button
+              type="button"
+              onClick={() => setActiveAccordionSection(activeAccordionSection === 'CLIENTE' ? 'ITENS' : 'CLIENTE')}
+              className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-colors"
+              title={activeAccordionSection === 'CLIENTE' ? 'Retrair seção' : 'Expandir seção'}
             >
-              <option value="" disabled>Selecione para preencher rápido...</option>
-              {clientes.map(c => (
-                <option key={c.id} value={c.cnpj}>
-                  {c.nome_fantasia || c.razao_social} ({c.cnpj})
-                </option>
-              ))}
-            </select>
+              {activeAccordionSection === 'CLIENTE' ? (
+                <ChevronUp className="w-5 h-5 text-rose-500" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-400" />
+              )}
+            </button>
           </div>
         </div>
+
+        {activeAccordionSection === 'CLIENTE' && (
+          <div className="p-6 space-y-4 animate-in fade-in duration-200">
 
         {/* Linha 1 */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -631,47 +776,82 @@ export default function OrderForm({ initialPedido }: Props) {
           </div>
         </div>
 
+          </div>
+        )}
+
       </div>
 
-      {/* BLOCO 2: GRADE DE ITENS (Até 11 Itens conforme ficha) */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-              <Package className="w-4 h-4 text-blue-600" />
-              <span>2. Grade de Itens do Pedido ({itens.length} de 11)</span>
-            </h2>
-            <p className="text-xs text-slate-500">
-              Selecione produtos cadastrados ou digite códigos e descrições personalizadas
-            </p>
+      {/* BLOCO 2: GRADE DE ITENS (EXPANSÍVEL / RETRÁTIL) */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all">
+        <div className="p-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white">
+          <div 
+            onClick={() => setActiveAccordionSection(activeAccordionSection === 'ITENS' ? 'CLIENTE' : 'ITENS')}
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-[#e6f7f2] flex items-center justify-center text-[#10b981] font-bold">
+              <Package className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 group-hover:text-[#10b981] transition-colors">
+                <span>2. Grade de Itens do Pedido ({itens.length} de 11)</span>
+                {activeAccordionSection !== 'ITENS' && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-normal">
+                    {valorTotalPedido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • {pesoTotalPedido.toFixed(2)} KG
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-slate-400">
+                Selecione produtos cadastrados ou digite códigos e descrições personalizadas
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => handleOpenCotacoesModal(0)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 border border-cyan-200 text-cyan-800 hover:bg-cyan-100 rounded-lg text-xs font-bold transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200/90 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-all"
               title="Acesso rápido ao histórico de cotações, compras anteriores e fornecedores"
             >
-              <History className="w-3.5 h-3.5 text-cyan-600" />
+              <History className="w-3.5 h-3.5 text-slate-500" />
               <span>Consultar Cotações & Usinas</span>
             </button>
 
             <button
               type="button"
-              onClick={addItem}
+              onClick={() => {
+                addItem();
+                if (activeAccordionSection !== 'ITENS') setActiveAccordionSection('ITENS');
+              }}
               disabled={itens.length >= 11}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e6f7f2] text-[#0d9488] hover:bg-[#ccf0e5] rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Adicionar Linha</span>
             </button>
+
+            {/* Botão Retrair / Expandir Estilo Imagem */}
+            <button
+              type="button"
+              onClick={() => setActiveAccordionSection(activeAccordionSection === 'ITENS' ? 'CLIENTE' : 'ITENS')}
+              className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-colors ml-1"
+              title={activeAccordionSection === 'ITENS' ? 'Retrair seção' : 'Expandir seção'}
+            >
+              {activeAccordionSection === 'ITENS' ? (
+                <ChevronUp className="w-5 h-5 text-rose-500" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-400" />
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Tabela de Itens Editável */}
-        <div className="overflow-x-auto border border-slate-300 rounded-lg">
-          <table className="w-full text-xs text-left border-collapse">
+        {activeAccordionSection === 'ITENS' && (
+          <div className="p-6 space-y-4 animate-in fade-in duration-200">
+
+        {/* Tabela de Itens Editável com suporte a dropdown flutuante */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl pb-16">
+          <table className="w-full min-w-[900px] text-xs text-left border-collapse">
             <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 uppercase text-[10px]">
               <tr>
                 <th className="p-2 w-8 text-center border-r border-slate-300">#</th>
@@ -736,15 +916,26 @@ export default function OrderForm({ initialPedido }: Props) {
                     />
                   </td>
 
-                  {/* PESO */}
+                  {/* PESO COM CALCULADORA ASSISTIDA */}
                   <td className="p-1 border-r border-slate-200">
-                    <input
-                      type="number"
-                      step="any"
-                      value={item.peso || ''}
-                      onChange={(e) => handleItemChange(idx, 'peso', parseFloat(e.target.value) || 0)}
-                      className="w-full p-1 text-center font-semibold border rounded text-blue-950"
-                    />
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        step="any"
+                        value={item.peso || ''}
+                        onChange={(e) => handleItemChange(idx, 'peso', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        className="w-full p-1 pr-6 text-center font-semibold border rounded text-blue-950 text-xs focus:ring-1 focus:ring-[#10b981]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleOpenWeightModal(idx)}
+                        title="Calcular Peso Teórico (Dimensões & Material)"
+                        className="absolute right-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 p-0.5 rounded transition"
+                      >
+                        <Scale className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
 
                   {/* CÓDIGO */}
@@ -758,25 +949,89 @@ export default function OrderForm({ initialPedido }: Props) {
                     />
                   </td>
 
-                  {/* DESCRIÇÃO */}
-                  <td className="p-1 border-r border-slate-200">
-                    <div className="space-y-1">
+                  {/* DESCRIÇÃO COM AUTOCOMPLETE / SUGESTÃO INTELIGENTE */}
+                  <td className="p-1 border-r border-slate-200 relative">
+                    <div className="space-y-1 relative">
                       <input
                         type="text"
                         value={item.descricao}
-                        onChange={(e) => handleItemChange(idx, 'descricao', e.target.value)}
+                        onFocus={() => setFocusedProductRowIndex(idx)}
+                        onChange={(e) => {
+                          handleItemChange(idx, 'descricao', e.target.value);
+                          setFocusedProductRowIndex(idx);
+                        }}
                         placeholder="Ex: PLACA POLICARBONATO CRISTAL 2050 X 1000 X 4MM 39206100"
-                        className="w-full p-1 text-xs font-semibold uppercase border rounded"
+                        className="w-full p-1.5 text-xs font-semibold uppercase border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#10b981] bg-white text-slate-800"
                       />
+
+                      {/* Dropdown Flutuante de Autocomplete com Produtos Cadastrados */}
+                      {focusedProductRowIndex === idx && item.descricao && item.descricao.trim().length >= 1 && (
+                        (() => {
+                          const query = item.descricao.toLowerCase().trim();
+                          const matchedProducts = produtos.filter(p => 
+                            p.descricao.toLowerCase().includes(query) || 
+                            p.codigo.toLowerCase().includes(query) ||
+                            (p.categoria && p.categoria.toLowerCase().includes(query))
+                          );
+
+                          if (matchedProducts.length === 0) return null;
+
+                          return (
+                            <div 
+                              className="absolute left-0 top-full mt-1 w-[380px] sm:w-[480px] bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-50 p-2 space-y-1 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1"
+                              onMouseDown={(e) => e.preventDefault()} // Impede perda de foco do input ao clicar no item
+                            >
+                              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between border-b border-slate-100">
+                                <span>Produtos Sugeridos ({matchedProducts.length})</span>
+                                <span className="text-[#10b981] font-semibold text-[9px]">Clique para preencher</span>
+                              </div>
+
+                              {matchedProducts.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => handleSelectProduto(idx, p)}
+                                  className="w-full text-left p-2 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 group border border-transparent hover:border-slate-100"
+                                >
+                                  <div className="overflow-hidden">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-[11px] text-slate-900 px-1.5 py-0.5 rounded bg-slate-100 group-hover:bg-[#e6f7f2] group-hover:text-[#0d9488] transition-colors">
+                                        {p.codigo}
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-500 uppercase truncate">
+                                        {p.categoria || 'Geral'}
+                                      </span>
+                                    </div>
+                                    <p className="font-semibold text-xs text-slate-800 uppercase mt-0.5 group-hover:text-[#0d9488] transition-colors line-clamp-1">
+                                      {p.descricao}
+                                    </p>
+                                  </div>
+
+                                  <div className="text-right shrink-0">
+                                    <span className="font-bold text-xs text-emerald-600 block">
+                                      {p.preco_venda_padrao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                      por {p.unidade_primaria} {p.peso_unitario ? `• ${p.peso_unitario}kg` : ''}
+                                    </span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()
+                      )}
+
                       {/* Sugestão de produtos rápidos + Botão de Cotações */}
                       <div className="flex items-center justify-between gap-1 overflow-x-auto text-[9px] text-slate-400 pt-0.5">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 items-center">
+                          <span className="text-slate-400 text-[9px]">Atalhos:</span>
                           {produtos.slice(0, 3).map(p => (
                             <button
                               key={p.id}
                               type="button"
-                              onClick={() => handleSelectProduto(idx, p.codigo)}
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-1 py-0.5 rounded whitespace-nowrap"
+                              onClick={() => handleSelectProduto(idx, p)}
+                              className="bg-slate-100 hover:bg-[#e6f7f2] hover:text-[#0d9488] text-slate-700 px-1.5 py-0.5 rounded-md whitespace-nowrap transition-colors font-medium"
                             >
                               + {p.codigo}
                             </button>
@@ -786,10 +1041,10 @@ export default function OrderForm({ initialPedido }: Props) {
                         <button
                           type="button"
                           onClick={() => handleOpenCotacoesModal(idx)}
-                          className="flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 whitespace-nowrap transition-colors"
+                          className="flex items-center gap-1 font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 whitespace-nowrap transition-colors"
                           title="Consultar cotações e compras para este produto"
                         >
-                          <History className="w-3 h-3 text-blue-600" />
+                          <History className="w-3 h-3 text-slate-400" />
                           <span>Cotações & Compras</span>
                         </button>
                       </div>
@@ -845,6 +1100,9 @@ export default function OrderForm({ initialPedido }: Props) {
             </tfoot>
           </table>
         </div>
+
+          </div>
+        )}
       </div>
 
       {/* BLOCO 3: VENDEDOR, COMISSÕES & NOTAS FISCAIS */}
@@ -867,6 +1125,11 @@ export default function OrderForm({ initialPedido }: Props) {
                 onChange={(e) => setVendedorNome(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-bold uppercase"
               >
+                {user?.nome && !vendedores.some(v => v.nome === user.nome) && (
+                  <option value={user.nome}>
+                    {user.nome} (Você)
+                  </option>
+                )}
                 {vendedores.map(v => (
                   <option key={v.id} value={v.nome}>
                     {v.nome}
@@ -1245,6 +1508,364 @@ export default function OrderForm({ initialPedido }: Props) {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* MODAL CALCULADORA DE PESO TEÓRICO (ENGENHARIA & MATERIAIS) */}
+      {showWeightModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* CABEÇALHO DO MODAL */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#10b981] flex items-center justify-center font-black">
+                  <Scale className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                    <span>Calculadora de Peso Teórico</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Item #{calcRowIndex + 1}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Cálculo exato por geometria (chapas, tubos, barras) e densidade metalúrgica / polímeros
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowWeightModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* CORPO DO MODAL */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-white">
+              
+              {/* TABS DE GEOMETRIA */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-2">Formato Geométrico:</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'CHAPA', label: 'Chapa / Placa' },
+                    { id: 'TUBO_REDONDO', label: 'Tubo Redondo' },
+                    { id: 'TUBO_QUADRADO', label: 'Tubo Quadrado' },
+                    { id: 'BARRA_REDONDA', label: 'Barra Redonda' }
+                  ].map((geo) => (
+                    <button
+                      key={geo.id}
+                      type="button"
+                      onClick={() => setCalcParams({ ...calcParams, geometria: geo.id as GeometriaTipo })}
+                      className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all ${
+                        calcParams.geometria === geo.id
+                          ? 'border-[#10b981] bg-emerald-50/70 text-emerald-800 shadow-2xs'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {geo.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* SELEÇÃO DO MATERIAL & DENSIDADE */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Material & Liga (Densidade):</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={calcParams.materialKey}
+                    onChange={(e) => setCalcParams({ ...calcParams, materialKey: e.target.value })}
+                    className="p-2.5 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800"
+                  >
+                    {Object.values(MATERIAIS_DENSIDADE).map((mat) => (
+                      <option key={mat.id} value={mat.id}>
+                        {mat.nome} ({mat.densidade_g_cm3} g/cm³)
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="bg-slate-50 rounded-xl border border-slate-200/80 p-2.5 flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Densidade Base:</span>
+                    <span className="font-extrabold text-slate-900">
+                      {MATERIAIS_DENSIDADE[calcParams.materialKey]?.densidade_g_cm3 || 7.93} g/cm³
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DIMENSÕES ESPECÍFICAS DA GEOMETRIA */}
+              <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-4">
+                <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>Dimensões do Perfil</span>
+                  <span className="text-[10px] text-slate-400 font-normal lowercase">(em milímetros e metros)</span>
+                </h4>
+
+                {/* SE CHAPA / PLACA */}
+                {calcParams.geometria === 'CHAPA' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Espessura (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.espessura_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, espessura_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 4"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Largura (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.largura_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, largura_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 1000"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Comprimento (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.comprimento_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, comprimento_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 2000"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* SE TUBO REDONDO */}
+                {calcParams.geometria === 'TUBO_REDONDO' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Diâmetro Ext. OD (mm):</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={calcParams.diametro_externo_mm || ''}
+                          onChange={(e) => setCalcParams({ ...calcParams, diametro_externo_mm: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ex: 25.4"
+                          className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Espessura Parede (mm):</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={calcParams.parede_mm || ''}
+                          onChange={(e) => setCalcParams({ ...calcParams, parede_mm: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ex: 1.5"
+                          className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Comprimento (metros):</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={calcParams.comprimento_metros || ''}
+                          onChange={(e) => setCalcParams({ ...calcParams, comprimento_metros: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ex: 6"
+                          className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+                    {/* Atalhos rápidos para polegadas comerciais */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Diâmetros Rápidos:</span>
+                      {[
+                        { label: '1/2" (12.7mm)', val: 12.7 },
+                        { label: '3/4" (19.05mm)', val: 19.05 },
+                        { label: '1" (25.4mm)', val: 25.4 },
+                        { label: '1.1/2" (38.1mm)', val: 38.1 },
+                        { label: '2" (50.8mm)', val: 50.8 },
+                        { label: '3" (76.2mm)', val: 76.2 }
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => setCalcParams({ ...calcParams, diametro_externo_mm: item.val })}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 transition"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SE TUBO QUADRADO / RETANGULAR */}
+                {calcParams.geometria === 'TUBO_QUADRADO' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Lado A (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.lado_a_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, lado_a_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 50"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Lado B (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.lado_b_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, lado_b_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 50"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Parede (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.parede_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, parede_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 2.0"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Comprimento (m):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.comprimento_metros || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, comprimento_metros: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 6"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* SE BARRA REDONDA */}
+                {calcParams.geometria === 'BARRA_REDONDA' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Diâmetro da Barra (mm):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.diametro_barra_mm || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, diametro_barra_mm: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 25.4"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Comprimento (metros):</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={calcParams.comprimento_metros || ''}
+                        onChange={(e) => setCalcParams({ ...calcParams, comprimento_metros: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 3 ou 6"
+                        className="w-full p-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* QUANTIDADE */}
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Quantidade de Peças / Peças na Linha:</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      min="1"
+                      value={calcParams.quantidade || 1}
+                      onChange={(e) => setCalcParams({ ...calcParams, quantidade: parseFloat(e.target.value) || 1 })}
+                      className="w-24 p-1.5 text-xs text-center font-bold rounded-lg border border-slate-300 bg-white focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs text-slate-500 font-semibold">unid</span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* CARD DE RESULTADOS LIVE */}
+              {(() => {
+                const res = calcularPesoTeorico(calcParams);
+                return (
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-md">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <span className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider block">
+                          Peso Unitário Calculado
+                        </span>
+                        <div className="text-2xl font-black">
+                          {res.pesoUnitarioKg} <span className="text-sm font-semibold">kg / pç</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider block">
+                          Peso Total ({calcParams.quantidade || 1} pçs)
+                        </span>
+                        <div className="text-3xl font-black text-amber-200">
+                          {res.pesoTotalKg} <span className="text-base font-semibold text-white">kg</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-white/20 text-[11px] text-emerald-50 flex items-center justify-between">
+                      <span className="font-mono truncate">{res.formulaExplicativa}</span>
+                      <span className="font-semibold text-white/90 shrink-0 ml-2">Fórmula ABNT / Usina</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+
+            {/* RODAPÉ DO MODAL */}
+            <div className="p-4 border-t border-slate-100 bg-white flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowWeightModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyWeightFromModal}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+              >
+                <Check className="w-4 h-4" />
+                <span>Aplicar Peso no Item #{calcRowIndex + 1}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* TOAST FLUTUANTE DE FEEDBACK */}
+      {appliedToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2">
+          <Check className="w-4 h-4" />
+          <span>{appliedToast}</span>
         </div>
       )}
 
