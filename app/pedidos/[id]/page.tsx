@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Pedido } from '@/lib/types';
 import { StorageService } from '@/lib/storage';
 import PrintableOrderSheet from '@/components/PrintableOrderSheet';
 import { ArrowLeft, Edit3, Truck, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PedidoDetalhePage() {
+function PedidoDetalheContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [pedido, setPedido] = useState<Pedido | null>(null);
 
@@ -22,17 +23,27 @@ export default function PedidoDetalhePage() {
     }
   }, [params.id]);
 
+  // Se veio com ?autoPrint=true aciona a impressão automaticamente
+  useEffect(() => {
+    if (pedido && searchParams.get('autoPrint') === 'true') {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [pedido, searchParams]);
+
   if (!pedido) {
     return (
       <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 max-w-lg mx-auto mt-10">
         <h3 className="font-bold text-lg text-slate-800">Pedido não encontrado</h3>
         <p className="text-xs text-slate-500 mt-1">O pedido pode ter sido removido ou o código está incorreto.</p>
         <Link
-          href="/"
+          href="/pedidos"
           className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Voltar ao Painel</span>
+          <span>Voltar aos Pedidos</span>
         </Link>
       </div>
     );
@@ -89,5 +100,13 @@ export default function PedidoDetalhePage() {
       <PrintableOrderSheet pedido={pedido} />
 
     </div>
+  );
+}
+
+export default function PedidoDetalhePage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-xs text-slate-400">Carregando espelho do pedido...</div>}>
+      <PedidoDetalheContent />
+    </Suspense>
   );
 }

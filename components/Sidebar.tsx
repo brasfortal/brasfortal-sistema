@@ -31,7 +31,8 @@ import {
   Share2,
   LifeBuoy,
   ChevronDown,
-  Scale
+  Scale,
+  Settings
 } from 'lucide-react';
 import { StorageService } from '@/lib/storage';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -78,7 +79,6 @@ const menuSections: MenuSection[] = [
     requiredRole: ['MASTER', 'COMERCIAL', 'LOGISTICA'],
     items: [
       { href: '/cadastros?tab=clientes', label: 'Clientes & Compradores', icon: Building2, tabKey: 'clientes' },
-      { href: '/cadastros?tab=produtos', label: 'Produtos / Metais', icon: Package, tabKey: 'produtos' },
       { href: '/cadastros?tab=fornecedores', label: 'Fornecedores / Usinas', icon: Factory, tabKey: 'fornecedores' },
       { href: '/motorista', label: 'Terminal Motorista', icon: Smartphone, tag: 'Mobile', requiredRole: ['MASTER', 'LOGISTICA', 'MOTORISTA'] },
     ]

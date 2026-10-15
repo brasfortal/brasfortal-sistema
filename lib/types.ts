@@ -60,7 +60,7 @@ export interface Produto {
   estoque_atual?: number;
 }
 
-export type TipoOrigemEstoque = 'SOBRA_CORTE' | 'BARRA_INTEIRA' | 'CHAPA_INTEIRA' | 'RETALHO';
+export type TipoOrigemEstoque = 'SOBRA_CORTE' | 'BARRA_INTEIRA' | 'CHAPA_INTEIRA' | 'RETALHO' | 'PECA_PRONTA';
 
 export interface ItemEstoqueDimensional {
   id: string;
@@ -68,8 +68,14 @@ export interface ItemEstoqueDimensional {
   descricao: string;
   material_id: string; // INOX_304, INOX_316, ACO_CARBONO, POLICARBONATO, ALUMINIO, LATAO
   material_nome: string;
-  geometria: 'TUBO_REDONDO' | 'TUBO_QUADRADO' | 'CHAPA' | 'BARRA_REDONDA' | 'PERFIL_VIGA';
+  geometria: 'TUBO_REDONDO' | 'TUBO_QUADRADO' | 'CHAPA' | 'BARRA_REDONDA' | 'PERFIL_VIGA' | 'CONEXAO_ACESSORIO';
   
+  // Dados Comerciais & Fiscais (Unificação de Produtos)
+  ncm?: string;
+  preco_venda_padrao?: number;
+  unidade_medida?: string; // PÇ, M, KG, BR
+  categoria?: string;
+
   // Dimensões Físicas
   espessura_mm?: number;
   largura_mm?: number;
@@ -80,14 +86,14 @@ export interface ItemEstoqueDimensional {
   diametro_barra_mm?: number;
   
   // Quantidade e Pesos
-  quantidade_pecas: number; // Ex: 1 barra, 3 chapas
+  quantidade_pecas: number; // Ex: 1 barra, 3 chapas, 180 peças
   metros_totais?: number; // Ex: 1 barra de 2m = 2m
   peso_unitario_kg: number; // Ex: 2.0 kg
   peso_total_kg: number; // Ex: 2.0 kg
   
   // Rastreabilidade e Localização
   tipo_origem: TipoOrigemEstoque;
-  localizacao_galpao?: string; // Ex: "Cavalete 2 - Sobras"
+  localizacao_galpao?: string; // Ex: "Cavalete 2 - Sobras", "Gaveteiro 4"
   data_entrada: string;
   observacoes?: string;
 }
@@ -137,6 +143,8 @@ export interface ExpedicaoNF {
   especie: string;
 }
 
+export type TipoFrete = 'CIF' | 'FOB' | 'RETIRA' | 'PROPRIO' | 'SEM_FRETE';
+
 export interface Pedido {
   id: string;
   numero_pedido: number;
@@ -157,6 +165,9 @@ export interface Pedido {
   pedido_cliente_n?: string; // Ex: '700118149'
   local_entrega?: string;
   transportadora?: string;
+  tipo_frete?: TipoFrete;
+  valor_frete?: number;
+  valor_produtos?: number;
   local_cobranca?: string;
   
   // Vendedor e Comissões
@@ -236,4 +247,41 @@ export interface Usuario {
   senha_hash?: string;
   ultimo_login?: string;
   created_at: string;
+}
+
+// ========================================================
+// CONFIGURAÇÕES DE ENGENHARIA (MATERIAIS, LIGAS & FORMATOS)
+// ========================================================
+export type TipoFamiliaMaterial = 
+  | 'INOX' 
+  | 'ACO_CARBONO' 
+  | 'POLICARBONATO' 
+  | 'ALUMINIO' 
+  | 'LATAO' 
+  | 'COBRE' 
+  | 'TITANIO' 
+  | 'PLASTICO' 
+  | 'OUTRO';
+
+export interface MaterialConfig {
+  id: string; // Ex: 'INOX_304', 'TITANIO_GR2'
+  nome: string; // Ex: 'Aço Inox AISI 304 / 304L'
+  tipo: TipoFamiliaMaterial;
+  densidade_g_cm3: number; // g/cm³ (Ex: 7.93)
+  fator_tubo_redondo?: number; // Fator de cálculo linear para tubos
+  descricao?: string;
+  ativo: boolean;
+  padrao_sistema?: boolean;
+}
+
+export interface FormatoGeometricoConfig {
+  id: string; // 'TUBO_REDONDO' | 'TUBO_QUADRADO' | 'BARRA_REDONDA' | 'CHAPA' | 'PERFIL_VIGA' | 'CONEXAO_ACESSORIO'
+  label: string;
+  descricao?: string;
+  formulaExplicativaResumida?: string;
+  unidadeMedidaPadrao: string; // 'M', 'PÇ', 'BR', etc.
+  dimensoesExigidas: string[];
+  ativo: boolean;
+  ordem: number;
+  padrao_sistema?: boolean;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, ParadaRomaneio, Usuario, ItemEstoqueDimensional } from './types';
+import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, ParadaRomaneio, Usuario, ItemEstoqueDimensional, MaterialConfig, FormatoGeometricoConfig } from './types';
 import { 
   INITIAL_CLIENTES, 
   INITIAL_FORNECEDORES, 
@@ -11,14 +11,19 @@ import {
   INITIAL_PEDIDOS, 
   INITIAL_ROMANEIOS,
   INITIAL_USUARIOS,
-  INITIAL_ESTOQUE_DIMENSIONAL
+  INITIAL_ESTOQUE_DIMENSIONAL,
+  INITIAL_MATERIAIS_CONFIG,
+  INITIAL_FORMATOS_CONFIG
 } from './mockData';
+import { MaterialDensity } from './weightCalculator';
 
 const STORAGE_KEYS = {
   CLIENTES: 'brasfortal_clientes',
   FORNECEDORES: 'brasfortal_fornecedores',
   PRODUTOS: 'brasfortal_produtos',
   ESTOQUE_DIMENSIONAL: 'brasfortal_estoque_dimensional',
+  MATERIAIS_CONFIG: 'brasfortal_materiais_config',
+  FORMATOS_CONFIG: 'brasfortal_formatos_config',
   VENDEDORES: 'brasfortal_vendedores',
   MOTORISTAS: 'brasfortal_motoristas',
   VEICULOS: 'brasfortal_veiculos',
@@ -93,26 +98,47 @@ export const StorageService = {
     return updated;
   },
 
-  // PRODUTOS (CRUD)
-  getProdutos: (): Produto[] => getFromStorage(STORAGE_KEYS.PRODUTOS, INITIAL_PRODUTOS),
+  // PRODUTOS & ESTOQUE UNIFICADOS (Single Source of Truth)
+  getProdutos: (): Produto[] => {
+    const estoque = StorageService.getEstoqueDimensional();
+    return estoque.map(e => ({
+      id: e.id,
+      codigo: e.codigo,
+      descricao: e.descricao,
+      ncm: e.ncm,
+      categoria: e.categoria || 'Metais & Conexões',
+      unidade_primaria: e.unidade_medida || 'PÇ',
+      unidade_secundaria: e.unidade_medida || 'PÇ',
+      fator_conversao: 1,
+      peso_unitario: e.peso_unitario_kg,
+      preco_venda_padrao: e.preco_venda_padrao || 0,
+      estoque_atual: e.quantidade_pecas
+    }));
+  },
   saveProduto: (produto: Produto): Produto[] => {
-    const current = StorageService.getProdutos();
-    const index = current.findIndex(p => p.id === produto.id);
-    let updated: Produto[];
-    if (index >= 0) {
-      updated = [...current];
-      updated[index] = produto;
-    } else {
-      updated = [produto, ...current];
-    }
-    saveToStorage(STORAGE_KEYS.PRODUTOS, updated);
-    return updated;
+    const itemEstoque: ItemEstoqueDimensional = {
+      id: produto.id,
+      codigo: produto.codigo,
+      descricao: produto.descricao,
+      material_id: 'INOX_304',
+      material_nome: 'Aço Inox AISI 304',
+      geometria: 'CONEXAO_ACESSORIO',
+      ncm: produto.ncm,
+      categoria: produto.categoria,
+      unidade_medida: produto.unidade_primaria,
+      preco_venda_padrao: produto.preco_venda_padrao,
+      peso_unitario_kg: produto.peso_unitario || 0,
+      peso_total_kg: (produto.peso_unitario || 0) * (produto.estoque_atual || 1),
+      quantidade_pecas: produto.estoque_atual || 1,
+      tipo_origem: 'PECA_PRONTA',
+      data_entrada: new Date().toISOString().split('T')[0]
+    };
+    StorageService.saveItemEstoqueDimensional(itemEstoque);
+    return StorageService.getProdutos();
   },
   deleteProduto: (id: string): Produto[] => {
-    const current = StorageService.getProdutos();
-    const updated = current.filter(p => p.id !== id);
-    saveToStorage(STORAGE_KEYS.PRODUTOS, updated);
-    return updated;
+    StorageService.deleteItemEstoqueDimensional(id);
+    return StorageService.getProdutos();
   },
 
   // ESTOQUE DIMENSIONAL & RETALHOS (CRUD)
@@ -310,12 +336,85 @@ export const StorageService = {
     }
   },
 
+  // CONFIGURAÇÕES DE ENGENHARIA (MATERIAIS & LIGAS)
+  getMateriaisConfig: (): MaterialConfig[] => getFromStorage(STORAGE_KEYS.MATERIAIS_CONFIG, INITIAL_MATERIAIS_CONFIG),
+  saveMaterialConfig: (mat: MaterialConfig): MaterialConfig[] => {
+    const current = StorageService.getMateriaisConfig();
+    const fator = mat.fator_tubo_redondo !== undefined && mat.fator_tubo_redondo > 0
+      ? mat.fator_tubo_redondo 
+      : Number(((mat.densidade_g_cm3 * Math.PI) / 1000).toFixed(5));
+    const matToSave = { ...mat, fator_tubo_redondo: fator };
+    const index = current.findIndex(m => m.id === mat.id);
+    let updated: MaterialConfig[];
+    if (index >= 0) {
+      updated = [...current];
+      updated[index] = matToSave;
+    } else {
+      updated = [...current, matToSave];
+    }
+    saveToStorage(STORAGE_KEYS.MATERIAIS_CONFIG, updated);
+    return updated;
+  },
+  deleteMaterialConfig: (id: string): MaterialConfig[] => {
+    const current = StorageService.getMateriaisConfig();
+    const updated = current.filter(m => m.id !== id);
+    saveToStorage(STORAGE_KEYS.MATERIAIS_CONFIG, updated);
+    return updated;
+  },
+  resetMateriaisConfig: (): MaterialConfig[] => {
+    saveToStorage(STORAGE_KEYS.MATERIAIS_CONFIG, INITIAL_MATERIAIS_CONFIG);
+    return INITIAL_MATERIAIS_CONFIG;
+  },
+  getMateriaisDensidadeMap: (): Record<string, MaterialDensity> => {
+    const list = StorageService.getMateriaisConfig().filter(m => m.ativo);
+    const map: Record<string, MaterialDensity> = {};
+    list.forEach(m => {
+      map[m.id] = {
+        id: m.id,
+        nome: m.nome,
+        tipo: (['INOX', 'ACO_CARBONO', 'POLICARBONATO', 'ALUMINIO', 'LATAO'].includes(m.tipo) ? m.tipo : 'OUTRO') as any,
+        densidade_g_cm3: m.densidade_g_cm3,
+        fator_tubo_redondo: m.fator_tubo_redondo || Number(((m.densidade_g_cm3 * Math.PI) / 1000).toFixed(5))
+      };
+    });
+    return map;
+  },
+
+  // CONFIGURAÇÕES DE FORMATOS GEOMÉTRICOS
+  getFormatosConfig: (): FormatoGeometricoConfig[] => getFromStorage(STORAGE_KEYS.FORMATOS_CONFIG, INITIAL_FORMATOS_CONFIG),
+  saveFormatoConfig: (formato: FormatoGeometricoConfig): FormatoGeometricoConfig[] => {
+    const current = StorageService.getFormatosConfig();
+    const index = current.findIndex(f => f.id === formato.id);
+    let updated: FormatoGeometricoConfig[];
+    if (index >= 0) {
+      updated = [...current];
+      updated[index] = formato;
+    } else {
+      updated = [...current, formato];
+    }
+    saveToStorage(STORAGE_KEYS.FORMATOS_CONFIG, updated);
+    return updated;
+  },
+  deleteFormatoConfig: (id: string): FormatoGeometricoConfig[] => {
+    const current = StorageService.getFormatosConfig();
+    const updated = current.filter(f => f.id !== id);
+    saveToStorage(STORAGE_KEYS.FORMATOS_CONFIG, updated);
+    return updated;
+  },
+  resetFormatosConfig: (): FormatoGeometricoConfig[] => {
+    saveToStorage(STORAGE_KEYS.FORMATOS_CONFIG, INITIAL_FORMATOS_CONFIG);
+    return INITIAL_FORMATOS_CONFIG;
+  },
+
   // Resetar para os dados iniciais de demonstração
   resetToDefault: (): void => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(STORAGE_KEYS.CLIENTES);
     localStorage.removeItem(STORAGE_KEYS.FORNECEDORES);
     localStorage.removeItem(STORAGE_KEYS.PRODUTOS);
+    localStorage.removeItem(STORAGE_KEYS.ESTOQUE_DIMENSIONAL);
+    localStorage.removeItem(STORAGE_KEYS.MATERIAIS_CONFIG);
+    localStorage.removeItem(STORAGE_KEYS.FORMATOS_CONFIG);
     localStorage.removeItem(STORAGE_KEYS.VENDEDORES);
     localStorage.removeItem(STORAGE_KEYS.MOTORISTAS);
     localStorage.removeItem(STORAGE_KEYS.VEICULOS);

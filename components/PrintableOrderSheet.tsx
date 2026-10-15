@@ -142,13 +142,20 @@ export default function PrintableOrderSheet({ pedido, showActions = true }: Prop
             </div>
           </div>
 
-          {/* Linha 4: Local para Entrega, Transportadora */}
+          {/* Linha 4: Local para Entrega, Frete & Transportadora */}
           <div className="flex divide-x divide-slate-800">
-            <div className="w-2/3 p-1.5 flex items-center">
+            <div className="w-1/2 p-1.5 flex items-center">
               <span className="font-bold text-slate-800 mr-2 uppercase text-[10px]">Local para Entrega:</span>
               <span className="font-semibold">{pedido.local_entrega || '-'}</span>
             </div>
-            <div className="w-1/3 p-1.5 flex items-center">
+            <div className="w-1/4 p-1.5 flex items-center bg-slate-50/50">
+              <span className="font-bold text-slate-800 mr-2 uppercase text-[10px]">Frete:</span>
+              <span className="font-bold uppercase text-slate-900">
+                {pedido.tipo_frete || 'CIF'}
+                {pedido.valor_frete && pedido.valor_frete > 0 ? ` (${pedido.valor_frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})` : ''}
+              </span>
+            </div>
+            <div className="w-1/4 p-1.5 flex items-center">
               <span className="font-bold text-slate-800 mr-2 uppercase text-[10px]">Transportadora:</span>
               <span className="font-semibold uppercase">{pedido.transportadora || '-'}</span>
             </div>
@@ -218,20 +225,53 @@ export default function PrintableOrderSheet({ pedido, showActions = true }: Prop
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-slate-900 bg-slate-50 font-bold">
-                <td colSpan={5} className="border-r border-slate-900 p-1.5 text-right uppercase text-[10px]">
-                  Totais:
-                </td>
-                <td className="border-r border-slate-900 p-1 text-center text-blue-950 font-bold">
-                  {pedido.peso_total ? `${pedido.peso_total.toFixed(2)} KG` : '-'}
-                </td>
-                <td colSpan={2} className="border-r border-slate-900 p-1.5 text-right uppercase text-[10px]">
-                  Valor Total do Pedido:
-                </td>
-                <td className="p-1.5 text-right pr-2 text-blue-900 text-xs font-black">
-                  {pedido.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </td>
-              </tr>
+              {pedido.valor_frete && pedido.valor_frete > 0 ? (
+                <>
+                  <tr className="border-t border-slate-900 bg-slate-50 text-[9px]">
+                    <td colSpan={5} className="border-r border-slate-900 p-1 text-right uppercase text-slate-600">
+                      Subtotal Produtos:
+                    </td>
+                    <td className="border-r border-slate-900 p-1 text-center font-bold">
+                      {pedido.peso_total ? `${pedido.peso_total.toFixed(2)} KG` : '-'}
+                    </td>
+                    <td colSpan={2} className="border-r border-slate-900 p-1 text-right uppercase text-slate-600">
+                      Frete ({pedido.tipo_frete || 'CIF'}):
+                    </td>
+                    <td className="p-1 text-right pr-2 font-bold text-slate-800">
+                      {pedido.valor_frete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </td>
+                  </tr>
+                  <tr className="border-t border-slate-900 bg-slate-100 font-bold">
+                    <td colSpan={5} className="border-r border-slate-900 p-1.5 text-right uppercase text-[10px]">
+                      Totais com Frete:
+                    </td>
+                    <td className="border-r border-slate-900 p-1 text-center text-blue-950 font-bold">
+                      {pedido.peso_total ? `${pedido.peso_total.toFixed(2)} KG` : '-'}
+                    </td>
+                    <td colSpan={2} className="border-r border-slate-900 p-1.5 text-right uppercase text-[10px]">
+                      Valor Total do Pedido:
+                    </td>
+                    <td className="p-1.5 text-right pr-2 text-blue-900 text-xs font-black">
+                      {pedido.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </td>
+                  </tr>
+                </>
+              ) : (
+                <tr className="border-t border-slate-900 bg-slate-50 font-bold">
+                  <td colSpan={5} className="border-r border-slate-900 p-1.5 text-right uppercase text-[10px]">
+                    Totais:
+                  </td>
+                  <td className="border-r border-slate-900 p-1 text-center text-blue-950 font-bold">
+                    {pedido.peso_total ? `${pedido.peso_total.toFixed(2)} KG` : '-'}
+                  </td>
+                  <td colSpan={2} className="border-r border-slate-900 p-1.5 text-right uppercase text-[10px]">
+                    Valor Total do Pedido:
+                  </td>
+                  <td className="p-1.5 text-right pr-2 text-blue-900 text-xs font-black">
+                    {pedido.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </td>
+                </tr>
+              )}
             </tfoot>
           </table>
         </div>

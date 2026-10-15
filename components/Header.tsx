@@ -206,6 +206,15 @@ export default function Header({ onToggleMobileMenu, isCollapsed }: HeaderProps)
                   />
                 </label>
 
+                <Link
+                  href="/configuracoes"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors text-slate-600"
+                >
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  <span>Configurações</span>
+                </Link>
+
                 {user?.perfil === 'MASTER' && (
                   <Link
                     href="/usuarios"

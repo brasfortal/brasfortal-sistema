@@ -63,7 +63,7 @@ export const MATERIAIS_DENSIDADE: Record<string, MaterialDensity> = {
   }
 };
 
-export type GeometriaTipo = 'CHAPA' | 'TUBO_REDONDO' | 'TUBO_QUADRADO' | 'BARRA_REDONDA';
+export type GeometriaTipo = 'CHAPA' | 'TUBO_REDONDO' | 'TUBO_QUADRADO' | 'BARRA_REDONDA' | 'PERFIL_VIGA' | 'CONEXAO_ACESSORIO';
 
 export interface ParametrosCalculoPeso {
   geometria: GeometriaTipo;
@@ -81,6 +81,8 @@ export interface ParametrosCalculoPeso {
   lado_b_mm?: number;
   // Barras Redondas
   diametro_barra_mm?: number;
+  // Peças prontas / conexões
+  peso_unitario_manual?: number;
   // Quantidade de peças
   quantidade: number;
 }
@@ -136,12 +138,16 @@ export function converterPolegadaParaMm(polStr: string): number | null {
 /**
  * Executa o cálculo exato do peso teórico
  */
-export function calcularPesoTeorico(params: ParametrosCalculoPeso): {
+export function calcularPesoTeorico(
+  params: ParametrosCalculoPeso,
+  customMateriaisMap?: Record<string, MaterialDensity>
+): {
   pesoUnitarioKg: number;
   pesoTotalKg: number;
   formulaExplicativa: string;
 } {
-  const mat = MATERIAIS_DENSIDADE[params.materialKey] || MATERIAIS_DENSIDADE.INOX_304;
+  const map = customMateriaisMap || MATERIAIS_DENSIDADE;
+  const mat = map[params.materialKey] || MATERIAIS_DENSIDADE[params.materialKey] || MATERIAIS_DENSIDADE.INOX_304;
   const quant = params.quantidade > 0 ? params.quantidade : 1;
   let unitKg = 0;
   let formula = '';
@@ -190,6 +196,20 @@ export function calcularPesoTeorico(params: ParametrosCalculoPeso): {
       const pesoPorMetro = (Math.PI * Math.pow(raio, 2) * mat.densidade_g_cm3) / 1000;
       unitKg = pesoPorMetro * metros;
       formula = `π × (${d}/2)² × ${mat.densidade_g_cm3} ÷ 1000 × ${metros}m`;
+      break;
+    }
+
+    case 'PERFIL_VIGA': {
+      const metros = params.comprimento_metros || 1;
+      const pesoM = params.peso_unitario_manual || 13.0;
+      unitKg = pesoM * metros;
+      formula = `${pesoM} kg/m × ${metros}m`;
+      break;
+    }
+
+    case 'CONEXAO_ACESSORIO': {
+      unitKg = params.peso_unitario_manual || 0;
+      formula = `Peso tabelado de norma/catálogo: ${unitKg} kg/pç`;
       break;
     }
   }

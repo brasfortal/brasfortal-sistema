@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Building2, 
   Package, 
@@ -31,10 +32,11 @@ import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Comprador }
 import { StorageService } from '@/lib/storage';
 
 function CadastrosContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
 
-  const [tab, setTab] = useState<'PRODUTOS' | 'CLIENTES' | 'FORNECEDORES' | 'MOTORISTAS'>('PRODUTOS');
+  const [tab, setTab] = useState<'PRODUTOS' | 'CLIENTES' | 'FORNECEDORES' | 'MOTORISTAS'>('CLIENTES');
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [drawerSubTipo, setDrawerSubTipo] = useState<'MOTORISTA' | 'VEICULO'>('MOTORISTA');
@@ -52,12 +54,13 @@ function CadastrosContent() {
 
   // Sincronizar com parâmetro da URL da sidebar
   useEffect(() => {
-    if (tabParam === 'clientes') setTab('CLIENTES');
+    if (tabParam === 'produtos') {
+      router.replace('/estoque');
+    } else if (tabParam === 'clientes') setTab('CLIENTES');
     else if (tabParam === 'fornecedores') setTab('FORNECEDORES');
     else if (tabParam === 'motoristas') setTab('MOTORISTAS');
-    else if (tabParam === 'produtos') setTab('PRODUTOS');
     setSearchTerm('');
-  }, [tabParam]);
+  }, [tabParam, router]);
 
   // Fechar drawer ao pressionar tecla ESC
   useEffect(() => {
@@ -554,19 +557,16 @@ function CadastrosContent() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
-            {tab === 'PRODUTOS' && <Package className="w-7 h-7 text-blue-600" />}
             {tab === 'CLIENTES' && <Building2 className="w-7 h-7 text-blue-600" />}
             {tab === 'FORNECEDORES' && <Factory className="w-7 h-7 text-blue-600" />}
             {tab === 'MOTORISTAS' && <Truck className="w-7 h-7 text-blue-600" />}
             <span>
-              {tab === 'PRODUTOS' && 'Catálogo de Produtos & Metais'}
               {tab === 'CLIENTES' && 'Gestão de Clientes & Compradores'}
               {tab === 'FORNECEDORES' && 'Gestão de Fornecedores & Usinas'}
               {tab === 'MOTORISTAS' && 'Motoristas & Frota de Veículos'}
             </span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            {tab === 'PRODUTOS' && 'Tubos, vigas, chapas e conexões com pesos teóricos, unidades e tabela de preços'}
             {tab === 'CLIENTES' && 'Base de clientes com CNPJ, Inscrição Estadual, fichas completas de compradores e prazos'}
             {tab === 'FORNECEDORES' && 'Usinas e distribuidores de metais, linhas de fornecimento e galpões de coleta'}
             {tab === 'MOTORISTAS' && 'Frota com placas, capacidade máxima em KG e motoristas do terminal mobile'}
@@ -576,16 +576,6 @@ function CadastrosContent() {
         <div className="flex items-center gap-3">
           {/* Alternador de Abas */}
           <div className="hidden sm:flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-            <button
-              onClick={() => setTab('PRODUTOS')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                tab === 'PRODUTOS' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Package className="w-3.5 h-3.5 text-blue-600" />
-              <span>Produtos ({produtos.length})</span>
-            </button>
-
             <button
               onClick={() => setTab('CLIENTES')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -617,6 +607,14 @@ function CadastrosContent() {
             </button>
           </div>
 
+          <Link
+            href="/estoque"
+            className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all shadow-2xs"
+          >
+            <Scale className="w-4 h-4" />
+            <span>Estoque & Retalhos</span>
+          </Link>
+
           {/* BOTÃO QUE ABRE O DRAWER PARA CRIAR NOVO */}
           <button
             onClick={handleNovoCadastro}
@@ -624,7 +622,6 @@ function CadastrosContent() {
           >
             <Plus className="w-4 h-4" />
             <span>
-              {tab === 'PRODUTOS' && 'Novo Produto / Metal'}
               {tab === 'CLIENTES' && 'Novo Cliente & Compradores'}
               {tab === 'FORNECEDORES' && 'Novo Fornecedor'}
               {tab === 'MOTORISTAS' && 'Novo Motorista / Veículo'}

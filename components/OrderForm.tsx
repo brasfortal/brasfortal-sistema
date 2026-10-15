@@ -25,9 +25,10 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Scale
+  Scale,
+  Printer
 } from 'lucide-react';
-import { Pedido, ItemPedido, ExpedicaoNF, Cliente, Produto, Vendedor, Fornecedor } from '@/lib/types';
+import { Pedido, ItemPedido, ExpedicaoNF, Cliente, Produto, Vendedor, Fornecedor, TipoFrete } from '@/lib/types';
 import { StorageService } from '@/lib/storage';
 import { useAuth } from '@/lib/auth';
 import { 
@@ -96,11 +97,13 @@ export default function OrderForm({ initialPedido }: Props) {
   const [telefone, setTelefone] = useState(initialPedido?.telefone || '');
   const [endereco, setEndereco] = useState(initialPedido?.endereco || '');
 
-  // Logística e Condições
+  // Logística e Frete
   const [condicoesPagamento, setCondicoesPagamento] = useState(initialPedido?.condicoes_pagamento || '30 DDL');
   const [pedidoClienteN, setPedidoClienteN] = useState(initialPedido?.pedido_cliente_n || '');
   const [localEntrega, setLocalEntrega] = useState(initialPedido?.local_entrega || '');
   const [transportadora, setTransportadora] = useState(initialPedido?.transportadora || '');
+  const [tipoFrete, setTipoFrete] = useState<TipoFrete>(initialPedido?.tipo_frete || 'CIF');
+  const [valorFrete, setValorFrete] = useState<number>(initialPedido?.valor_frete || 0);
   const [localCobranca, setLocalCobranca] = useState(initialPedido?.local_cobranca || '');
 
   // Vendedor (Assume o usuário logado automaticamente)
@@ -424,19 +427,20 @@ export default function OrderForm({ initialPedido }: Props) {
   };
 
   // Calcular totais
-  const valorTotalPedido = itens.reduce((acc, it) => acc + (it.valor_total || 0), 0);
+  const subtotalProdutos = itens.reduce((acc, it) => acc + (it.valor_total || 0), 0);
+  const valorTotalPedido = subtotalProdutos + (valorFrete || 0);
   const pesoTotalPedido = itens.reduce((acc, it) => acc + (it.peso || 0), 0);
 
-  // Recalcular comissão sugerida (ex: 3.5%)
+  // Recalcular comissão sugerida (ex: 3.5% sobre produtos)
   useEffect(() => {
-    if (!initialPedido && valorTotalPedido > 0) {
-      setValorComissao(Number((valorTotalPedido * 0.035).toFixed(2)));
+    if (!initialPedido && subtotalProdutos > 0) {
+      setValorComissao(Number((subtotalProdutos * 0.035).toFixed(2)));
     }
-  }, [valorTotalPedido, initialPedido]);
+  }, [subtotalProdutos, initialPedido]);
 
-  // Salvar Pedido
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Salvar Pedido (com opção de apenas salvar ou salvar e imprimir)
+  const handleSubmit = (action: 'SAVE_ONLY' | 'SAVE_AND_PRINT', e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!clienteNome) {
       alert('Por favor, informe o nome do cliente.');
       return;
@@ -461,6 +465,9 @@ export default function OrderForm({ initialPedido }: Props) {
       pedido_cliente_n: pedidoClienteN,
       local_entrega: localEntrega,
       transportadora,
+      tipo_frete: tipoFrete,
+      valor_frete: valorFrete,
+      valor_produtos: subtotalProdutos,
       local_cobranca: localCobranca,
       vendedor_nome: vendedorNome,
       valor_comissao: valorComissao,
@@ -474,11 +481,16 @@ export default function OrderForm({ initialPedido }: Props) {
     };
 
     StorageService.savePedido(novoPedido);
-    router.push(`/pedidos/${novoPedido.id}`);
+
+    if (action === 'SAVE_AND_PRINT') {
+      router.push(`/pedidos/${novoPedido.id}?autoPrint=true`);
+    } else {
+      router.push('/pedidos');
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 w-full pb-12">
+    <form onSubmit={(e) => handleSubmit('SAVE_ONLY', e)} className="space-y-6 w-full pb-12">
       
       {/* Barra de Ações Superior */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -508,22 +520,33 @@ export default function OrderForm({ initialPedido }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value as any)}
-            className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-slate-700"
+            className="text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-700"
           >
             <option value="PEDIDO">Documento: PEDIDO DE VENDA</option>
             <option value="ORCAMENTO">Documento: ORÇAMENTO / PROPOSTA</option>
           </select>
 
           <button
+            type="button"
+            onClick={(e) => handleSubmit('SAVE_AND_PRINT', e)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm transition-all hover:scale-[1.02]"
+            title="Salvar o pedido e abrir a folha oficial para impressão"
+          >
+            <Printer className="w-4 h-4 text-emerald-400" />
+            <span>Imprimir</span>
+          </button>
+
+          <button
             type="submit"
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
+            className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02]"
+            title="Salvar o pedido e retornar à lista de pedidos"
           >
             <Save className="w-4 h-4" />
-            <span>Salvar & Visualizar Espelho</span>
+            <span>Salvar Pedido</span>
           </button>
         </div>
       </div>
@@ -721,18 +744,37 @@ export default function OrderForm({ initialPedido }: Props) {
           </div>
         </div>
 
-        {/* Linha 4 & 5 */}
+        {/* Linha 4: Frete e Logística */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <div className="md:col-span-7">
+          <div className="md:col-span-4">
             <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-              Local para Entrega (Doca / Galpão / Cidade)
+              Tipo de Frete
+            </label>
+            <select
+              value={tipoFrete}
+              onChange={(e) => setTipoFrete(e.target.value as TipoFrete)}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-semibold bg-white text-slate-800"
+            >
+              <option value="CIF">CIF (Emitente / Brasfortal)</option>
+              <option value="FOB">FOB (Destinatário / Cliente)</option>
+              <option value="RETIRA">RETIRA (Balcão)</option>
+              <option value="PROPRIO">FROTA PRÓPRIA (Brasfortal)</option>
+              <option value="SEM_FRETE">SEM FRETE</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-3">
+            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+              Valor do Frete (R$)
             </label>
             <input
-              type="text"
-              value={localEntrega}
-              onChange={(e) => setLocalEntrega(e.target.value)}
-              placeholder="Av. Industrial, 1500 - Galpão 3 - Campinas/SP"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-medium"
+              type="number"
+              step="0.01"
+              min="0"
+              value={valorFrete || ''}
+              onChange={(e) => setValorFrete(parseFloat(e.target.value) || 0)}
+              placeholder="0,00"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-bold text-slate-900"
             />
           </div>
 
@@ -746,6 +788,22 @@ export default function OrderForm({ initialPedido }: Props) {
               onChange={(e) => setTransportadora(e.target.value)}
               placeholder="Ex: FROTA PRÓPRIA (CARLOS) ou BRASPRESS"
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-medium uppercase"
+            />
+          </div>
+        </div>
+
+        {/* Linha 5: Locais de Entrega e Cobrança */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-7">
+            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+              Local para Entrega (Doca / Galpão / Cidade)
+            </label>
+            <input
+              type="text"
+              value={localEntrega}
+              onChange={(e) => setLocalEntrega(e.target.value)}
+              placeholder="Av. Industrial, 1500 - Galpão 3 - Campinas/SP"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-medium"
             />
           </div>
 
@@ -1082,6 +1140,23 @@ export default function OrderForm({ initialPedido }: Props) {
               ))}
             </tbody>
             <tfoot>
+              {valorFrete > 0 && (
+                <tr className="bg-slate-50 border-t border-slate-200 text-xs">
+                  <td colSpan={5} className="p-2 text-right uppercase text-[11px] text-slate-500 border-r border-slate-200">
+                    Subtotal Produtos:
+                  </td>
+                  <td className="p-2 text-center text-slate-600 font-semibold border-r border-slate-200">
+                    {pesoTotalPedido.toFixed(2)} KG
+                  </td>
+                  <td colSpan={2} className="p-2 text-right uppercase text-[11px] text-slate-500 border-r border-slate-200">
+                    Frete ({tipoFrete}):
+                  </td>
+                  <td className="p-2 text-right pr-2 text-xs font-bold text-slate-700">
+                    {valorFrete.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </td>
+                  <td></td>
+                </tr>
+              )}
               <tr className="bg-slate-100 font-bold border-t border-slate-300">
                 <td colSpan={5} className="p-2 text-right uppercase text-[11px] border-r border-slate-300">
                   Peso Total Estimado da Carga:
@@ -1176,7 +1251,7 @@ export default function OrderForm({ initialPedido }: Props) {
             <span>4. Expedição / Nota Fiscal Vinculada</span>
           </h2>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                 Número da NF
@@ -1246,26 +1321,68 @@ export default function OrderForm({ initialPedido }: Props) {
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-semibold uppercase"
               />
             </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                Modalidade de Frete
+              </label>
+              <select
+                value={tipoFrete}
+                onChange={(e) => setTipoFrete(e.target.value as TipoFrete)}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-semibold bg-white text-slate-800"
+              >
+                <option value="CIF">CIF (Emitente / Brasfortal)</option>
+                <option value="FOB">FOB (Destinatário / Cliente)</option>
+                <option value="RETIRA">RETIRA (Balcão)</option>
+                <option value="PROPRIO">FROTA PRÓPRIA (Brasfortal)</option>
+                <option value="SEM_FRETE">SEM FRETE</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                Valor do Frete (R$)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={valorFrete || ''}
+                onChange={(e) => setValorFrete(parseFloat(e.target.value) || 0)}
+                placeholder="0,00"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-bold text-slate-900"
+              />
+            </div>
           </div>
         </div>
 
       </div>
 
-      {/* Botão Final */}
-      <div className="flex justify-end gap-3 pt-4">
+      {/* Botões Finais de Ação */}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-100 transition-colors"
+          className="px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors"
         >
           Cancelar
         </button>
+
+        <button
+          type="button"
+          onClick={(e) => handleSubmit('SAVE_AND_PRINT', e)}
+          className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs shadow-md transition-all hover:scale-[1.02]"
+        >
+          <Printer className="w-4 h-4 text-emerald-400" />
+          <span>Imprimir</span>
+        </button>
+
         <button
           type="submit"
-          className="flex items-center gap-2 px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02]"
+          className="flex items-center gap-2 px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02]"
         >
           <Save className="w-4 h-4" />
-          <span>Salvar & Emitir Espelho do Pedido</span>
+          <span>Salvar Pedido</span>
         </button>
       </div>
 

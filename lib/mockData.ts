@@ -1,4 +1,4 @@
-import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, Usuario, ItemEstoqueDimensional } from './types';
+import { Cliente, Fornecedor, Produto, Vendedor, Motorista, Veiculo, Pedido, Romaneio, Usuario, ItemEstoqueDimensional, MaterialConfig, FormatoGeometricoConfig } from './types';
 
 export const INITIAL_CLIENTES: Cliente[] = [
   {
@@ -565,6 +565,10 @@ export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
     material_id: 'INOX_304',
     material_nome: 'Aço Inox AISI 304',
     geometria: 'TUBO_REDONDO',
+    categoria: 'Tubos Inox',
+    ncm: '73064000',
+    unidade_medida: 'M',
+    preco_venda_padrao: 52.00,
     diametro_externo_mm: 25.4,
     parede_mm: 1.5,
     comprimento_metros: 2.0,
@@ -579,11 +583,15 @@ export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
   },
   {
     id: 'est-2',
-    codigo: 'TB-304-1-INT',
-    descricao: 'Tubo Inox 304 OD 1" x 1.50mm - Barra Padrão 6m',
+    codigo: 'TB-304-1',
+    descricao: 'Tubo Inox 304 OD 1" x 1.50mm c/ Costura ASTM A269',
     material_id: 'INOX_304',
     material_nome: 'Aço Inox AISI 304',
     geometria: 'TUBO_REDONDO',
+    categoria: 'Tubos Inox',
+    ncm: '73064000',
+    unidade_medida: 'M',
+    preco_venda_padrao: 52.00,
     diametro_externo_mm: 25.4,
     parede_mm: 1.5,
     comprimento_metros: 6.0,
@@ -597,11 +605,36 @@ export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
   },
   {
     id: 'est-3',
-    codigo: 'PL-POLI-CRISTAL',
-    descricao: 'Placa Policarbonato Cristal 4mm - Retalho',
+    codigo: '450',
+    descricao: 'Placa Policarbonato Cristal 2050 x 1000 x 4mm',
     material_id: 'POLICARBONATO',
     material_nome: 'Policarbonato Compacto',
     geometria: 'CHAPA',
+    categoria: 'Placas & Chapas',
+    ncm: '39206100',
+    unidade_medida: 'PÇ',
+    preco_venda_padrao: 505.70,
+    espessura_mm: 4.0,
+    largura_mm: 1000,
+    comprimento_mm: 2050,
+    quantidade_pecas: 45,
+    peso_unitario_kg: 9.84,
+    peso_total_kg: 442.80,
+    tipo_origem: 'CHAPA_INTEIRA',
+    localizacao_galpao: 'Galpão 3 - Termoplásticos',
+    data_entrada: '2026-10-10'
+  },
+  {
+    id: 'est-4',
+    codigo: 'PL-POLI-CRISTAL',
+    descricao: 'Placa Policarbonato Cristal 4mm - Retalho 1000x1000',
+    material_id: 'POLICARBONATO',
+    material_nome: 'Policarbonato Compacto',
+    geometria: 'CHAPA',
+    categoria: 'Placas & Chapas',
+    ncm: '39206100',
+    unidade_medida: 'PÇ',
+    preco_venda_padrao: 250.00,
     espessura_mm: 4.0,
     largura_mm: 1000,
     comprimento_mm: 1000,
@@ -614,12 +647,34 @@ export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
     observacoes: 'Metade de placa 2050x1000 cortada'
   },
   {
-    id: 'est-4',
+    id: 'est-5',
+    codigo: 'CX-90-2',
+    descricao: 'Cotovelo 90º 2" 150 LBS BSP Inox 304',
+    material_id: 'INOX_304',
+    material_nome: 'Aço Inox AISI 304',
+    geometria: 'CONEXAO_ACESSORIO',
+    categoria: 'Conexões Inox',
+    ncm: '73072900',
+    unidade_medida: 'PÇ',
+    preco_venda_padrao: 64.80,
+    quantidade_pecas: 180,
+    peso_unitario_kg: 0.65,
+    peso_total_kg: 117.00,
+    tipo_origem: 'PECA_PRONTA',
+    localizacao_galpao: 'Gaveteiro 12 - Conexões Inox',
+    data_entrada: '2026-10-05'
+  },
+  {
+    id: 'est-6',
     codigo: 'CH-316-3MM',
     descricao: 'Chapa Inox 316L 3.00mm x 1200 x 3000mm',
     material_id: 'INOX_316',
     material_nome: 'Aço Inox AISI 316 / 316L',
     geometria: 'CHAPA',
+    categoria: 'Placas & Chapas',
+    ncm: '72193300',
+    unidade_medida: 'CH',
+    preco_venda_padrao: 2150.00,
     espessura_mm: 3.0,
     largura_mm: 1200,
     comprimento_mm: 3000,
@@ -631,12 +686,16 @@ export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
     data_entrada: '2026-10-08'
   },
   {
-    id: 'est-5',
+    id: 'est-7',
     codigo: 'BR-304-1POL',
     descricao: 'Barra Redonda Inox 304 1" (25.4mm) - 3 metros',
     material_id: 'INOX_304',
     material_nome: 'Aço Inox AISI 304',
     geometria: 'BARRA_REDONDA',
+    categoria: 'Tubos Inox',
+    ncm: '72221100',
+    unidade_medida: 'BR',
+    preco_venda_padrao: 380.00,
     diametro_barra_mm: 25.4,
     comprimento_metros: 3.0,
     quantidade_pecas: 6,
@@ -646,6 +705,209 @@ export const INITIAL_ESTOQUE_DIMENSIONAL: ItemEstoqueDimensional[] = [
     tipo_origem: 'BARRA_INTEIRA',
     localizacao_galpao: 'Cavalete 4 - Barras Maciças',
     data_entrada: '2026-10-11'
+  },
+  {
+    id: 'est-8',
+    codigo: 'VF-W150',
+    descricao: 'Viga I/W 150 x 13.0 kg/m - Aço Carbono ASTM A36 (6m)',
+    material_id: 'ACO_CARBONO',
+    material_nome: 'Aço Carbono (A36 / SAE 1020)',
+    geometria: 'PERFIL_VIGA',
+    categoria: 'Vigas Estruturais',
+    ncm: '72163300',
+    unidade_medida: 'BR',
+    preco_venda_padrao: 920.00,
+    espessura_mm: 150,
+    largura_mm: 100,
+    comprimento_mm: 6000,
+    comprimento_metros: 6.0,
+    quantidade_pecas: 24,
+    metros_totais: 144.0,
+    peso_unitario_kg: 78.0,
+    peso_total_kg: 1872.00,
+    tipo_origem: 'BARRA_INTEIRA',
+    localizacao_galpao: 'Pátio Externo - Vigas Gerdau',
+    data_entrada: '2026-10-09'
+  },
+  {
+    id: 'est-9',
+    codigo: 'FL-SO-3',
+    descricao: 'Flange Slip-On 3" 150 LBS ANSI B16.5 Aço Carbono',
+    material_id: 'ACO_CARBONO',
+    material_nome: 'Aço Carbono (A36 / SAE 1020)',
+    geometria: 'CONEXAO_ACESSORIO',
+    categoria: 'Flanges',
+    ncm: '73079100',
+    unidade_medida: 'PÇ',
+    preco_venda_padrao: 115.00,
+    quantidade_pecas: 60,
+    peso_unitario_kg: 3.4,
+    peso_total_kg: 204.00,
+    tipo_origem: 'PECA_PRONTA',
+    localizacao_galpao: 'Gaveteiro 8 - Flanges Carbono',
+    data_entrada: '2026-10-04'
+  }
+];
+
+export const INITIAL_MATERIAIS_CONFIG: MaterialConfig[] = [
+  {
+    id: 'INOX_304',
+    nome: 'Aço Inox AISI 304 / 304L',
+    tipo: 'INOX',
+    densidade_g_cm3: 7.93,
+    fator_tubo_redondo: 0.02491,
+    descricao: 'Aço inoxidável austenítico mais comum na indústria química, alimentícia e farmacêutica.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'INOX_316',
+    nome: 'Aço Inox AISI 316 / 316L',
+    tipo: 'INOX',
+    densidade_g_cm3: 8.00,
+    fator_tubo_redondo: 0.02513,
+    descricao: 'Contém molibdênio para maior resistência à corrosão por cloretos, meio marinho e ácidos.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'INOX_430',
+    nome: 'Aço Inox AISI 430',
+    tipo: 'INOX',
+    densidade_g_cm3: 7.75,
+    fator_tubo_redondo: 0.02434,
+    descricao: 'Aço ferrítico magnético, excelente custo-benefício para eletrodomésticos e arquitetura.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'ACO_CARBONO',
+    nome: 'Aço Carbono (A36 / SAE 1020)',
+    tipo: 'ACO_CARBONO',
+    densidade_g_cm3: 7.85,
+    fator_tubo_redondo: 0.02466,
+    descricao: 'Aço estrutural de ampla aplicação para vigas, chapas, caldeiraria pesada e tubulações.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'POLICARBONATO',
+    nome: 'Policarbonato Compacto',
+    tipo: 'POLICARBONATO',
+    densidade_g_cm3: 1.20,
+    fator_tubo_redondo: 0,
+    descricao: 'Termoplástico de alta resistência a impactos, ótima transparência ótica e leveza extrema.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'ALUMINIO',
+    nome: 'Alumínio (5052 / 6063)',
+    tipo: 'ALUMINIO',
+    densidade_g_cm3: 2.70,
+    fator_tubo_redondo: 0.00848,
+    descricao: 'Metal não ferroso leve, de alta condutividade térmica/elétrica e excelente resistência à corrosão.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'LATAO',
+    nome: 'Latão / Bronze Comercial',
+    tipo: 'LATAO',
+    densidade_g_cm3: 8.50,
+    fator_tubo_redondo: 0.02670,
+    descricao: 'Liga nobre de cobre e zinco/estanho utilizada em conexões, válvulas, buchas e mancais.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'COBRE',
+    nome: 'Cobre Eletrolítico Puro',
+    tipo: 'COBRE',
+    densidade_g_cm3: 8.96,
+    fator_tubo_redondo: 0.02815,
+    descricao: 'Cobre eletrolítico 99.9% para barramentos elétricos de alta condutância e trocadores de calor.',
+    ativo: true,
+    padrao_sistema: true
+  },
+  {
+    id: 'TITANIO',
+    nome: 'Titânio Grau 2',
+    tipo: 'TITANIO',
+    densidade_g_cm3: 4.51,
+    fator_tubo_redondo: 0.01417,
+    descricao: 'Metal aeroespacial e cirúrgico de altíssima resistência mecânica e química com baixo peso específico.',
+    ativo: true,
+    padrao_sistema: true
+  }
+];
+
+export const INITIAL_FORMATOS_CONFIG: FormatoGeometricoConfig[] = [
+  {
+    id: 'TUBO_REDONDO',
+    label: 'Tubo Redondo',
+    descricao: 'Tubos circulares industriais (Schedule, OD, Condução, Sanitários e Mecânicos)',
+    formulaExplicativaResumida: '(OD - Parede) × Parede × Fator × Comprimento',
+    unidadeMedidaPadrao: 'M',
+    dimensoesExigidas: ['diametro_externo_mm', 'parede_mm', 'comprimento_metros'],
+    ativo: true,
+    ordem: 1,
+    padrao_sistema: true
+  },
+  {
+    id: 'TUBO_QUADRADO',
+    label: 'Tubo Quadrado / Retangular',
+    descricao: 'Tubos com seção retangular ou quadrada para serralheria e estruturas (Metalon)',
+    formulaExplicativaResumida: 'Perímetro Médio × Parede × Densidade × Comprimento',
+    unidadeMedidaPadrao: 'M',
+    dimensoesExigidas: ['lado_a_mm', 'lado_b_mm', 'parede_mm', 'comprimento_metros'],
+    ativo: true,
+    ordem: 2,
+    padrao_sistema: true
+  },
+  {
+    id: 'BARRA_REDONDA',
+    label: 'Barra Redonda / Tarugo',
+    descricao: 'Barras maciças cilíndricas para usinagem, eixos e trefilados',
+    formulaExplicativaResumida: 'π × Raio² × Comprimento × Densidade',
+    unidadeMedidaPadrao: 'M',
+    dimensoesExigidas: ['diametro_barra_mm', 'comprimento_metros'],
+    ativo: true,
+    ordem: 3,
+    padrao_sistema: true
+  },
+  {
+    id: 'CHAPA',
+    label: 'Chapa / Placa / Retalho',
+    descricao: 'Chapas planas cortadas sob medida ou inteiras (Espessura × Largura × Comprimento)',
+    formulaExplicativaResumida: '(Espessura × Largura × Comprimento × Densidade) ÷ 1.000.000',
+    unidadeMedidaPadrao: 'PÇ',
+    dimensoesExigidas: ['espessura_mm', 'largura_mm', 'comprimento_mm'],
+    ativo: true,
+    ordem: 4,
+    padrao_sistema: true
+  },
+  {
+    id: 'PERFIL_VIGA',
+    label: 'Viga / Perfil Estrutural',
+    descricao: 'Perfis laminados I, W, U, H com peso linear tabelado por metro linear',
+    formulaExplicativaResumida: 'Tabela Padrão (kg/m) × Comprimento em Metros',
+    unidadeMedidaPadrao: 'BR',
+    dimensoesExigidas: ['comprimento_metros', 'peso_unitario_manual'],
+    ativo: true,
+    ordem: 5,
+    padrao_sistema: true
+  },
+  {
+    id: 'CONEXAO_ACESSORIO',
+    label: 'Peça Pronta / Conexão',
+    descricao: 'Curvas, cotovelos, flanges, niples, válvulas, luvas e conexões industriais',
+    formulaExplicativaResumida: 'Peso Real de Balança / Catálogo Técnico da Usina',
+    unidadeMedidaPadrao: 'PÇ',
+    dimensoesExigidas: ['peso_unitario_manual'],
+    ativo: true,
+    ordem: 6,
+    padrao_sistema: true
   }
 ];
 
